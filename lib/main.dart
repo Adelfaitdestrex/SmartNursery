@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/app_theme.dart';
-import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 
 void main() {
   runApp(const SmartNurseryApp());
@@ -15,7 +14,10 @@ class SmartNurseryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SmartNursery',
       theme: AppTheme.light,
-      home: const FeedPage(),
+      home: Scaffold(
+        appBar: AppBar(title: const Text('SmartNursery')),
+        body: const Center(child: Text('Welcome to SmartNursery!')),
+      ),
     );
   }
 }
