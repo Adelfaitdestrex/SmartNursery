@@ -42,8 +42,23 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // ── Green wave header ──────────────────────────────
-            const AuthHeader(height: 220),
+            // ── Header & Hero Image ────────────────────────────
+            Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                const AuthHeader(height: 220),
+                Positioned(
+                  // Positioned similarly to Figma coordinates overlaying the wave
+                  top: 60,
+                  child: Image.asset(
+                    'assets/images/enfants-jouent.png',
+                    width: 230,
+                    height: 188,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ],
+            ),
 
             // ── Content ───────────────────────────────────────
             Padding(
@@ -53,7 +68,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 16),
 
                     // Title
                     const Text(
@@ -69,10 +84,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       hint: 'Email',
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      prefixIcon: const Icon(
-                        Icons.email_outlined,
-                        color: AppColors.formPrefixOrange,
-                        size: 22,
+                      prefixIcon: Image.asset(
+                        'assets/icons/email.png',
+                        width: 26,
+                        height: 26,
                       ),
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Veuillez entrer votre email' : null,
@@ -85,10 +100,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       hint: 'Mot de passe',
                       controller: _passwordController,
                       isPassword: true,
-                      prefixIcon: const Icon(
-                        Icons.lock_rounded,
-                        color: AppColors.formPrefixYellow,
-                        size: 22,
+                      prefixIcon: Image.asset(
+                        'assets/icons/cadenas.png',
+                        width: 26,
+                        height: 26,
                       ),
                       validator: (v) =>
                           (v == null || v.length < 6) ? 'Minimum 6 caractères' : null,
@@ -101,10 +116,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       hint: 'confirmer votre mot de passe',
                       controller: _confirmController,
                       isPassword: true,
-                      prefixIcon: const Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.primaryButton,
-                        size: 22,
+                      prefixIcon: Image.asset(
+                        'assets/icons/Check.png',
+                        width: 26,
+                        height: 26,
                       ),
                       validator: (v) => v != _passwordController.text
                           ? 'Les mots de passe ne correspondent pas'

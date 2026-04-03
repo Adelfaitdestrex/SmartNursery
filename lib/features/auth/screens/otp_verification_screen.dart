@@ -58,8 +58,22 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // ── Green wave header ──────────────────────────────
-            const AuthHeader(height: 220),
+            // ── Header & Hero Image ────────────────────────────
+            Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                const AuthHeader(height: 220),
+                Positioned(
+                  top: 60,
+                  child: Image.asset(
+                    'assets/images/enfants-jouent.png',
+                    width: 230,
+                    height: 188,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ],
+            ),
 
             // ── Content ───────────────────────────────────────
             Padding(
