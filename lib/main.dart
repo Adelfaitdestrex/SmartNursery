@@ -3,13 +3,12 @@ import 'package:smartnursery/design_system/app_theme.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const SmartNurseryApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class SmartNurseryApp extends StatelessWidget {
+  const SmartNurseryApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
