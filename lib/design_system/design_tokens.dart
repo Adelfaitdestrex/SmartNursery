@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 abstract final class AppColors {
   static const Color pageBackground = Color(0xFFE5F8E5);
-<<<<<<< HEAD
   // Header wave gradients from Figma
   static const Color headerTop = Color(0xFF89B832);
   static const Color headerBottom = Color(0xFF3D5216);
@@ -29,15 +28,6 @@ abstract final class AppColors {
   static const Color formPrefixOrange = Color(0xFFE8824A);
   static const Color formPrefixYellow = Color(0xFFF9A826);
   static const Color textLink = Color(0xFF89B832);
-=======
-  static const Color headerTop = Color(0xFF89B832);
-  static const Color headerBottom = Color(0xFF3D5216);
-  static const Color cardBackground = Colors.white;
-  static const Color mutedText = Color(0x80000000);
-  static const Color bottomNavBackground = Color(0xFFA2D642);
-  static const Color bottomNavBorder = Color(0xFF817F7F);
-  static const Color activeNavText = Color(0xFF39471F);
->>>>>>> main
 }
 
 abstract final class AppShadows {
@@ -56,8 +46,6 @@ abstract final class AppShadows {
       blurRadius: 4,
     ),
   ];
-<<<<<<< HEAD
-
   // Button shadow targeting the figma aesthetics
   static const List<BoxShadow> primaryButton = [
     BoxShadow(
@@ -66,8 +54,6 @@ abstract final class AppShadows {
       blurRadius: 6,
     ),
   ];
-=======
->>>>>>> main
 }
 
 abstract final class AppTextStyles {
@@ -76,8 +62,6 @@ abstract final class AppTextStyles {
     fontWeight: FontWeight.w800,
     color: Colors.white,
   );
-<<<<<<< HEAD
-  
   static const TextStyle authTitle = TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.w800,
@@ -91,8 +75,6 @@ abstract final class AppTextStyles {
     color: AppColors.mutedText,
     height: 1.5,
   );
-=======
->>>>>>> main
 
   static const TextStyle newPostText = TextStyle(
     fontSize: 24,
