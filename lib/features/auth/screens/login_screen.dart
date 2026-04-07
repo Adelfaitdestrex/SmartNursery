@@ -24,7 +24,7 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 80),
               // صورة الأطفال المركزية (asset)
               Image.asset(
-                'assets/images/azre.png', // تأكد من اسم الصورة ومكانها
+                'assets/images/enfants-jouent.png', // تأكد من اسم الصورة ومكانها
                 height: 180,
               ),
               const SizedBox(height: 20),
@@ -44,7 +44,7 @@ class LoginScreen extends StatelessWidget {
                     prefixIcon: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Image.asset(
-                        'assets/images/orange.png', // تأكد من الاسم
+                        'assets/icons/email_icon.png', // تأكد من الاسم
                         height: 24,
                         width: 24,
                       ),
@@ -68,7 +68,7 @@ class LoginScreen extends StatelessWidget {
                     prefixIcon: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Image.asset(
-                        'assets/images/purpel.png', // تأكد من الاسم
+                        'assets/icons/cadenas.png', // تأكد من الاسم
                         height: 24,
                         width: 24,
                       ),
@@ -131,7 +131,7 @@ class LoginScreen extends StatelessWidget {
                   GestureDetector(
                     onTap: () {},
                     child: Image.asset(
-                      'assets/images/compte.png', // تأكد من الاسم
+                      'assets/images/google.png', // تأكد من الاسم
                       height: 40,
                       width: 40,
                     ),
