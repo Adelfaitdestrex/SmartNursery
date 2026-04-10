@@ -1,9 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:smartnursery/services/firebase/firebase_services.dart';
+import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 
-void main() => runApp(const MaterialApp(home: LoginScreen()));
-
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final FirebaseServices _firebaseServices = FirebaseServices();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez remplir tous les champs.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final error = await _firebaseServices.signInWithEmailAndPassword(
+      email,
+      password,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
+      );
+    } else {
+      // Connexion réussie → navigation vers la feed page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const FeedPage()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +74,8 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 80),
-              // صورة الأطفال المركزية (asset)
               Image.asset(
-                'assets/images/enfants-jouent.png', // تأكد من اسم الصورة ومكانها
+                'assets/images/enfants-jouent.png',
                 height: 180,
               ),
               const SizedBox(height: 20),
@@ -34,17 +85,18 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 40),
 
-              // حقل البريد الإلكتروني مع أيقونة القفل الأولى
+              // Champ Email
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     hintText: 'Email',
-                    // أيقونة القفل البرتقالية والبنفسجية (asset)
                     prefixIcon: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Image.asset(
-                        'assets/icons/email_icon.png', // تأكد من الاسم
+                        'assets/icons/email.png',
                         height: 24,
                         width: 24,
                       ),
@@ -57,18 +109,18 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // حقل كلمة المرور مع أيقونة القفل الثانية
+              // Champ Mot de passe
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30),
                 child: TextField(
+                  controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     hintText: 'Mot de passe',
-                    // أيقونة قفل الرمز الثانية (asset)
                     prefixIcon: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Image.asset(
-                        'assets/icons/cadenas.png', // تأكد من الاسم
+                        'assets/icons/cadenas.png',
                         height: 24,
                         width: 24,
                       ),
@@ -95,8 +147,10 @@ class LoginScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 20),
+
+              // Bouton Se connecter
               ElevatedButton(
-                onPressed: () {},
+                onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8BC34A),
                   padding: const EdgeInsets.symmetric(
@@ -107,14 +161,22 @@ class LoginScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: const Text(
-                  'Se connecter',
-                  style: TextStyle(fontSize: 20, color: Colors.white),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text(
+                        'Se connecter',
+                        style: TextStyle(fontSize: 20, color: Colors.white),
+                      ),
               ),
 
               const SizedBox(height: 30),
-              // خيارات التواصل الاجتماعي مع أيقونة Google
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -126,16 +188,7 @@ class LoginScreen extends StatelessWidget {
                       size: 40,
                     ),
                   ),
-                  const SizedBox(width: 20),
-                  // أيقونة Google (asset)
-                  GestureDetector(
-                    onTap: () {},
-                    child: Image.asset(
-                      'assets/images/google.png', // تأكد من الاسم
-                      height: 40,
-                      width: 40,
-                    ),
-                  ),
+
                 ],
               ),
 
@@ -156,6 +209,7 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -163,3 +217,4 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
+

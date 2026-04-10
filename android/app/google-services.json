@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1023759846976",
+    "project_id": "smart-nursery-7a6f6",
+    "storage_bucket": "smart-nursery-7a6f6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1023759846976:android:e52eeb49ba832dceab19a5",
+        "android_client_info": {
+          "package_name": "com.example.smartnursery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmFb9-PJgOKLxGOVwL1VSGodnibqQYY04"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
