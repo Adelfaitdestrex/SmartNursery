@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'admin_settings_screen.dart';
+import 'admin_users_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'admin_add_user_screen.dart';
+import '../../classes/screens/classes_page.dart';
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
 
@@ -21,7 +25,12 @@ class AdminScreen extends StatelessWidget {
 
               // ─── Mon Profil ───────────────────────────────────────────
               _AdminMenuItem(
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminSettingsScreen()),
+                  );
+                },
                 child: Row(
                   children: [
                     // Purple avatar circle with initial "G"
@@ -45,13 +54,15 @@ class AdminScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 15),
-                    const Text(
-                      'Mon Profil',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0x40000000),
-                        fontFamily: 'Inter',
+                    const Expanded(
+                      child: Text(
+                        'Mon Profil',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0x40000000),
+                          fontFamily: 'Inter',
+                        ),
                       ),
                     ),
                   ],
@@ -62,7 +73,12 @@ class AdminScreen extends StatelessWidget {
 
               // ─── Gérer les classes ────────────────────────────────────
               _AdminMenuItem(
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                  );
+                },
                 child: Row(
                   children: [
                     // Backpack icon (from Material Icons as a close equivalent)
@@ -80,13 +96,15 @@ class AdminScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 31),
-                    const Text(
-                      'Gérer les classes',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0x40000000),
-                        fontFamily: 'Inter',
+                    const Expanded(
+                      child: Text(
+                        'Gérer les classes',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0x40000000),
+                          fontFamily: 'Inter',
+                        ),
                       ),
                     ),
                   ],
@@ -97,7 +115,12 @@ class AdminScreen extends StatelessWidget {
 
               // ─── Gérer les utilisateurs ───────────────────────────────
               _AdminMenuItem(
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminUsersScreen()),
+                  );
+                },
                 child: Row(
                   children: [
                     // Users icon
@@ -111,13 +134,15 @@ class AdminScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 30),
-                    const Text(
-                      'Gérer les\nutilisateurs',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0x40000000),
-                        fontFamily: 'Inter',
+                    const Expanded(
+                      child: Text(
+                        'Gérer les\nutilisateurs',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0x40000000),
+                          fontFamily: 'Inter',
+                        ),
                       ),
                     ),
                   ],
@@ -128,7 +153,12 @@ class AdminScreen extends StatelessWidget {
 
               // ─── Dashboard ────────────────────────────────────────────
               _AdminMenuItem(
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                  );
+                },
                 child: Row(
                   children: [
                     // Dashboard / layout icon
@@ -142,13 +172,52 @@ class AdminScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 30),
-                    const Text(
-                      'Dashboard',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0x40000000),
-                        fontFamily: 'Inter',
+                    const Expanded(
+                      child: Text(
+                        'Dashboard',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0x40000000),
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // ─── Créer un Utilisateur ────────────────────────────────────────────
+              _AdminMenuItem(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminAddUserScreen()),
+                  );
+                },
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Icon(
+                        Icons.person_add_outlined,
+                        size: 50,
+                        color: Color(0xFF555555),
+                      ),
+                    ),
+                    const SizedBox(width: 30),
+                    const Expanded(
+                      child: Text(
+                        'Créer Utilisateur',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0x40000000),
+                          fontFamily: 'Inter',
+                        ),
                       ),
                     ),
                   ],
