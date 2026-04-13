@@ -4,6 +4,7 @@ import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 import 'package:smartnursery/services/firebase/firebase_services.dart';
 import 'package:smartnursery/features/activities/screens/activities_page.dart';
 import 'package:smartnursery/features/auth/screens/reset_password_screen.dart';
+import 'package:smartnursery/features/auth/screens/restricted_access.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -217,11 +218,16 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Vous n'avez pas de compte ? "),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const RestrictedAccessScreen(),
+                        ),
+                      );
+                    },
                     child: const Text(
-                      'inscrivez-vous',
+                      'Vous n\'avez pas de compte ?',
                       style: TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.bold,

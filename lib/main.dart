@@ -4,7 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/design_system/app_theme.dart';
 import 'package:smartnursery/features/auth/screens/login_screen.dart';
 import 'package:smartnursery/features/activities/screens/activities_page.dart';
+import 'package:smartnursery/features/auth/screens/restricted_access.dart';
+import 'package:smartnursery/features/auth/screens/role_selection.dart';
 import 'package:smartnursery/services/firebase/firebase_options.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

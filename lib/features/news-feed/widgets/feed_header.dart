@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
-import 'package:smartnursery/features/settings/screens/settings_page.dart'; // adapte le chemin
+import 'package:smartnursery/features/settings/screens/settings_page.dart';
 
 class FeedHeader extends StatelessWidget {
   const FeedHeader({super.key});
@@ -37,13 +37,38 @@ class FeedHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 const Text(
-                  'Setting',
-                  style: TextStyle(color: Colors.white, fontSize: 29 / 2),
+                  'Menu',
+                  style: TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 23),
+          SizedBox(
+            width: 61,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    // TODO: Navigate to notifications page
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Notifications')),
+                    );
+                  },
+                  child: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Notif',
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
           const Expanded(
             child: Text(
               'Flux d\'actualité',
@@ -51,7 +76,6 @@ class FeedHeader extends StatelessWidget {
               style: AppTextStyles.headerTitle,
             ),
           ),
-          const Icon(Icons.notifications_none, color: Colors.white, size: 30),
         ],
       ),
     );
