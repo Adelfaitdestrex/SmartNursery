@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 
+
 class FeedPostCard extends StatelessWidget {
   const FeedPostCard({super.key});
 
   static const String _foodImage =
-      'https://www.figma.com/api/mcp/asset/ebe03044-9c27-4c54-a20d-f38d42c5dd9d';
+      'assets/images/';
   static const String _drinkImage =
       'https://www.figma.com/api/mcp/asset/96f7f5ff-f9fc-4e53-a25b-bb88388fc4ee';
 

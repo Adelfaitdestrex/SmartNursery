@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/features/settings/screens/settings_page.dart';
+import 'package:smartnursery/features/admin/screens/admin_redirection_screen.dart';
+import 'package:smartnursery/features/auth/screens/login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -12,11 +15,7 @@ class ProfileScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF3E8E2),
-              Color(0xFFA4CF53),
-              Color(0xFFE0E6E2),
-            ],
+            colors: [Color(0xFFF3E8E2), Color(0xFFA4CF53), Color(0xFFE0E6E2)],
             stops: [0.0, 0.23558, 0.47115],
           ),
         ),
@@ -58,7 +57,13 @@ class _Header extends StatelessWidget {
                 fontSize: 34,
                 fontWeight: FontWeight.w700,
                 color: Color(0xCC000000),
-                shadows: [Shadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                shadows: [
+                  Shadow(
+                    color: Color(0x40000000),
+                    offset: Offset(0, 4),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
             ),
             SizedBox(width: 8),
@@ -68,7 +73,11 @@ class _Header extends StatelessWidget {
         SizedBox(height: 6),
         Text(
           'Modifiez facilement vos information',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Color(0x4D000000)),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: Color(0x4D000000),
+          ),
         ),
       ],
     );
@@ -91,14 +100,27 @@ class _TopActions extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF89B832),
                 borderRadius: BorderRadius.circular(60),
-                boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x40000000),
+                    offset: Offset(0, 4),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.person_outline, size: 28, color: Colors.black87),
                   SizedBox(width: 8),
-                  Text('Mon\nprofil', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.black87)),
+                  Text(
+                    'Mon\nprofil',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -116,14 +138,27 @@ class _TopActions extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFFFFF),
                   borderRadius: BorderRadius.circular(40),
-                  boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x40000000),
+                      offset: Offset(0, 4),
+                      blurRadius: 4,
+                    ),
+                  ],
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.settings_outlined, size: 24, color: Colors.black87),
+                    Icon(
+                      Icons.settings_outlined,
+                      size: 24,
+                      color: Colors.black87,
+                    ),
                     SizedBox(width: 8),
-                    Text('Paramétres', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                    Text(
+                      'Paramétres',
+                      style: TextStyle(fontSize: 16, color: Colors.black87),
+                    ),
                   ],
                 ),
               ),
@@ -146,7 +181,13 @@ class _MainProfileCard extends StatelessWidget {
         color: const Color(0xFFF5F8FF),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: const Color(0xFF89B832)),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            offset: Offset(0, 4),
+            blurRadius: 4,
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -190,7 +231,11 @@ class _MainProfileCard extends StatelessWidget {
               backgroundColor: const Color(0xFFB20000),
               textColor: Colors.white,
               borderColor: const Color(0xFF8FBC3B),
-              onTap: () {},
+              onTap: () {
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const AdminScreen()));
+              },
             ),
             const SizedBox(height: 12),
             _CustomButton(
@@ -207,7 +252,14 @@ class _MainProfileCard extends StatelessWidget {
               textColor: const Color(0xFFB20000),
               borderColor: const Color(0xFFBC3B3B),
               iconData: Icons.logout,
-              onTap: () {},
+              onTap: () async {
+                await FirebaseAuth.instance.signOut();
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
             ),
           ],
         ),
@@ -251,7 +303,13 @@ class _ChildCard extends StatelessWidget {
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    shadows: [Shadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                    shadows: [
+                      Shadow(
+                        color: Color(0x40000000),
+                        offset: Offset(0, 4),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
                 ),
                 Text(
@@ -260,7 +318,13 @@ class _ChildCard extends StatelessWidget {
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFFF5F5F5),
-                    shadows: [Shadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                    shadows: [
+                      Shadow(
+                        color: Color(0x40000000),
+                        offset: Offset(0, 4),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
                 ),
                 Text(
@@ -285,7 +349,11 @@ class _InfoField extends StatelessWidget {
   final String value;
   final IconData iconData;
 
-  const _InfoField({required this.label, required this.value, required this.iconData});
+  const _InfoField({
+    required this.label,
+    required this.value,
+    required this.iconData,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +363,13 @@ class _InfoField extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: const Color(0xFF8FBC3B)),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            offset: Offset(0, 4),
+            blurRadius: 4,
+          ),
+        ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -364,7 +438,13 @@ class _CustomButton extends StatelessWidget {
           color: backgroundColor,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(color: borderColor),
-          boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x40000000),
+              offset: Offset(0, 4),
+              blurRadius: 4,
+            ),
+          ],
         ),
         child: Center(
           child: Row(

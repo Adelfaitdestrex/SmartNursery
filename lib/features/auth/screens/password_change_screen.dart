@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
-import 'package:smartnursery/features/auth/screens/otp_verification_screen.dart';
 import 'package:smartnursery/features/auth/widgets/auth_header.dart';
 import 'package:smartnursery/features/auth/widgets/auth_text_field.dart';
+import 'package:smartnursery/features/auth/screens/login_screen.dart';
 import 'package:smartnursery/features/auth/auth_service.dart';
 
-class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+class PasswordChangeScreen extends StatefulWidget {
+  final String email;
+
+  const PasswordChangeScreen({super.key, required this.email});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  State<PasswordChangeScreen> createState() => _PasswordChangeScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _PasswordChangeScreenState extends State<PasswordChangeScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
@@ -27,53 +31,39 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
 
-      final email = _emailController.text.trim();
+      final result = await AuthService.changePasswordWithOtp(
+        email: widget.email,
+        newPassword: _passwordController.text,
+      );
 
-      // Request password reset with OTP
-      final result = await AuthService.requestPasswordReset(email);
-
-      setState(() => _isLoading = false);
-
-      if (!mounted) return;
+      if (!mounted) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
       if (result['success'] == true) {
-        final otp = result['otp'] as String;
-
-        // Email sent successfully, show confirmation dialog
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Email envoyé'),
-            content: Text(
-              'Un code de vérification a été envoyé à $email.\n\n'
-              'Vérifiez votre boîte mail et entrez le code dans l\'écran suivant.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mot de passe changé avec succès !'),
+            backgroundColor: Colors.green,
           ),
         );
 
         if (!mounted) return;
-
-        // Navigate to OTP verification
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) =>
-                OtpVerificationScreen(expectedOtp: otp, email: email),
-          ),
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
         );
       } else {
-        // Email failed to send
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Une erreur s\'est produite'),
+            content: Text(
+              result['message'] ?? 'Erreur lors du changement de mot de passe',
+            ),
             backgroundColor: Colors.red,
           ),
         );
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -91,7 +81,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               children: [
                 const AuthHeader(height: 220),
                 Positioned(
-                  // Positioned similarly to Figma coordinates overlaying the wave
                   top: 60,
                   child: Image.asset(
                     'assets/images/enfants-jouent.png',
@@ -115,17 +104,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                     // Title
                     const Text(
-                      'Réinitialiser votre mot de passe',
+                      'Nouveau mot de passe',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.authTitle,
                     ),
 
                     const SizedBox(height: 16),
 
-                    const Text(
-                      'Entrez votre adresse e-mail pour recevoir un lien de réinitialisation.',
+                    Text(
+                      'Pour l\'email : ${widget.email}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.mutedText,
                       ),
@@ -133,18 +122,35 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                     const SizedBox(height: 32),
 
-                    // Email field
+                    // Password field
                     AuthTextField(
-                      hint: 'Email',
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
+                      hint: 'Nouveau mot de passe',
+                      controller: _passwordController,
+                      isPassword: true,
                       prefixIcon: Image.asset(
-                        'assets/icons/email.png',
+                        'assets/icons/cadenas.png',
                         width: 26,
                         height: 26,
                       ),
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Veuillez entrer votre email'
+                      validator: (v) => (v == null || v.length < 6)
+                          ? 'Minimum 6 caractères'
+                          : null,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Confirm password field
+                    AuthTextField(
+                      hint: 'Confirmer le mot de passe',
+                      controller: _confirmController,
+                      isPassword: true,
+                      prefixIcon: Image.asset(
+                        'assets/icons/Check.png',
+                        width: 26,
+                        height: 26,
+                      ),
+                      validator: (v) => v != _passwordController.text
+                          ? 'Les mots de passe ne correspondent pas'
                           : null,
                     ),
 
@@ -177,7 +183,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 ),
                               )
                             : const Text(
-                                'Envoyer le lien',
+                                'Changer le mot de passe',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,

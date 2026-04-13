@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
+import 'package:smartnursery/services/firebase/firebase_services.dart';
 
 class AdminAddUserScreen extends StatefulWidget {
   const AdminAddUserScreen({super.key});
@@ -13,53 +14,91 @@ class AdminAddUserScreen extends StatefulWidget {
 class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
-  
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final FirebaseServices _firebaseServices = FirebaseServices();
+  bool _isLoading = false;
+  bool _emailManuallyEdited = false;
+
   int _selectedRoleIndex = 0;
   final List<String> _roles = ['Parent', 'Enseignant', 'Administrateur'];
-  
-  String _generatedPassword = '';
 
   @override
   void initState() {
     super.initState();
     _generatePassword();
-    _firstNameController.addListener(() => setState(() {}));
-    _lastNameController.addListener(() => setState(() {}));
+    _firstNameController.addListener(_onNameChanged);
+    _lastNameController.addListener(_onNameChanged);
+    _emailController.addListener(() {
+      // Detect if user manually typed in the email field
+      final autoEmail = _buildAutoEmail();
+      if (_emailController.text != autoEmail) {
+        _emailManuallyEdited = true;
+      }
+    });
+  }
+
+  void _onNameChanged() {
+    setState(() {
+      // Only auto-update email if user hasn't manually edited it
+      if (!_emailManuallyEdited) {
+        _emailController.text = _buildAutoEmail();
+        _emailController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _emailController.text.length),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   void _generatePassword() {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#*';
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#*';
     final rnd = Random.secure();
+    final newPassword = String.fromCharCodes(
+      Iterable.generate(
+        10,
+        (_) => chars.codeUnitAt(rnd.nextInt(chars.length)),
+      ),
+    );
     setState(() {
-      _generatedPassword = String.fromCharCodes(Iterable.generate(
-          10, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+      _passwordController.text = newPassword;
+      _passwordController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _passwordController.text.length),
+      );
     });
   }
 
   String _cleanString(String text) {
-    var withDiacritics = 'ÀÁÂÃÄÅàáâãäåÒÓÔÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÿÑñ';
-    var withoutDiacritics = 'AAAAAAaaaaaaOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuyNn';
-    
+    var withDiacritics =
+        'ÀÁÂÃÄÅàáâãäåÒÓÔÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÿÑñ';
+    var withoutDiacritics =
+        'AAAAAAaaaaaaOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuyNn';
+
     String temp = text.trim().toLowerCase();
     for (int i = 0; i < withDiacritics.length; i++) {
-        temp = temp.replaceAll(withDiacritics[i].toLowerCase(), withoutDiacritics[i].toLowerCase());
+      temp = temp.replaceAll(
+        withDiacritics[i].toLowerCase(),
+        withoutDiacritics[i].toLowerCase(),
+      );
     }
     temp = temp.replaceAll(' ', '.');
     temp = temp.replaceAll(RegExp(r'[^a-z0-9.]'), '');
     return temp;
   }
 
-  String get _generatedEmail {
+  String _buildAutoEmail() {
     final first = _cleanString(_firstNameController.text);
     final last = _cleanString(_lastNameController.text);
-    if (first.isEmpty && last.isEmpty) return 'prenom.nom@ecole-everbloom.fr';
+    if (first.isEmpty && last.isEmpty) return '';
     if (first.isEmpty) return '$last@ecole-everbloom.fr';
     if (last.isEmpty) return '$first@ecole-everbloom.fr';
     return '$first.$last@ecole-everbloom.fr';
@@ -112,9 +151,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
                 onTap: () => Navigator.maybePop(context),
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: const BoxDecoration(shape: BoxShape.circle),
                   child: const Icon(
                     Icons.arrow_back,
                     color: Color(0xFF006F1D),
@@ -141,7 +178,9 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFF91F78E), width: 2),
               image: const DecorationImage(
-                image: NetworkImage('https://i.pravatar.cc/150?img=47'), // Admin avatar
+                image: NetworkImage(
+                  'https://i.pravatar.cc/150?img=47',
+                ), // Admin avatar
                 fit: BoxFit.cover,
               ),
             ),
@@ -288,13 +327,18 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF006F1D) : const Color(0xFFECF6ED),
+                      color: isSelected
+                          ? const Color(0xFF006F1D)
+                          : const Color(0xFFECF6ED),
                       borderRadius: BorderRadius.circular(24),
-                      border: isSelected 
-                        ? null 
-                        : Border.all(color: const Color(0xFFD6E6DB)),
+                      border: isSelected
+                          ? null
+                          : Border.all(color: const Color(0xFFD6E6DB)),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -303,7 +347,9 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
                         fontFamily: 'Inter',
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? const Color(0xFFEAFFE2) : const Color(0xFF546259),
+                        color: isSelected
+                            ? const Color(0xFFEAFFE2)
+                            : const Color(0xFF546259),
                       ),
                     ),
                   ),
@@ -322,7 +368,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF006F1D), // Dark green theme
+          color: const Color(0xFF006F1D),
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
@@ -340,7 +386,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
                 Icon(Icons.auto_awesome, color: Color(0xFF91F78E), size: 24),
                 SizedBox(width: 12),
                 Text(
-                  'Identifiants Générés',
+                  'Identifiants',
                   style: TextStyle(
                     fontFamily: 'Plus Jakarta Sans',
                     fontSize: 18,
@@ -351,17 +397,48 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            _buildCredentialDisplay(
-              label: 'Adresse e-mail générée',
-              value: _generatedEmail,
+
+            // ── Email éditable ─────────────────────────────────
+            _buildCredentialLabel('Adresse e-mail'),
+            const SizedBox(height: 8),
+            _buildEditableCredentialField(
+              controller: _emailController,
               icon: Icons.alternate_email,
+              hint: 'prenom.nom@ecole-everbloom.fr',
+              keyboardType: TextInputType.emailAddress,
+              trailingWidget: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _emailManuallyEdited = false;
+                    _emailController.text = _buildAutoEmail();
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF006118),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
             ),
+
             const SizedBox(height: 16),
-            _buildCredentialDisplay(
-              label: 'Mot de passe temporaire',
-              value: _generatedPassword,
+
+            // ── Mot de passe éditable ──────────────────────────
+            _buildCredentialLabel('Mot de passe temporaire'),
+            const SizedBox(height: 8),
+            _buildEditableCredentialField(
+              controller: _passwordController,
               icon: Icons.key_outlined,
-              actionWidget: GestureDetector(
+              hint: 'Mot de passe',
+              keyboardType: TextInputType.visiblePassword,
+              trailingWidget: GestureDetector(
                 onTap: _generatePassword,
                 child: Container(
                   padding: const EdgeInsets.all(8),
@@ -369,13 +446,18 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
                     color: const Color(0xFF006118),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.refresh, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.refresh,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
+
             const SizedBox(height: 16),
             const Text(
-              'Un e-mail sera envoyé à cette adresse avec les instructions de connexion.',
+              'Vous pouvez modifier les identifiants ou utiliser ceux générés automatiquement.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,
@@ -389,85 +471,172 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
     );
   }
 
-  Widget _buildCredentialDisplay({
-    required String label,
-    required String value,
-    required IconData icon,
-    Widget? actionWidget,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Color(0x99FFFFFF),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: const Color(0xFF91F78E), size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  value,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              if (actionWidget != null) ...[
-                const SizedBox(width: 12),
-                actionWidget,
-              ],
-              if (actionWidget == null) ...[
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: value));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Copié dans le presse-papier !'), duration: Duration(seconds: 1)),
-                    );
-                  },
-                  child: const Icon(Icons.copy, color: Color(0x99FFFFFF), size: 20),
-                )
-              ]
-            ],
-          ),
-        ),
-      ],
+  Widget _buildCredentialLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: Color(0x99FFFFFF),
+      ),
     );
+  }
+
+  Widget _buildEditableCredentialField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    required TextInputType keyboardType,
+    Widget? trailingWidget,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF91F78E), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 15,
+                  color: Colors.white.withValues(alpha: 0.35),
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              cursorColor: const Color(0xFF91F78E),
+            ),
+          ),
+          if (trailingWidget != null) ...[
+            const SizedBox(width: 8),
+            trailingWidget,
+          ],
+        ],
+      ),
+    );
+  }
+
+
+
+  Future<void> _handleCreateUser() async {
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (firstName.isEmpty || lastName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Le prénom et le nom sont obligatoires.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez entrer une adresse e-mail valide.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Le mot de passe doit contenir au moins 6 caractères.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await _firebaseServices.createAccountOnSecondaryApp(
+      email,
+      password,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result == null || result.contains(' ') || result.contains('Error') || result.contains('erreur')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result ?? 'Erreur inconnue'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // result is uid
+    final uid = result;
+    try {
+      await _firebaseServices.saveUserData(
+        uid,
+        firstName,
+        lastName,
+        email,
+        _roles[_selectedRoleIndex],
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Compte créé, mais erreur lors de la sauvegarde des données.',
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.pop(context);
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Utilisateur créé : $email'),
+        backgroundColor: const Color(0xFF006F1D),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    Navigator.pop(context);
   }
 
   Widget _buildSubmitButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: ElevatedButton(
-        onPressed: () {
-          // Firebase Create User logic will step in here later
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('L\'utilisateur $_generatedEmail a été créé avec succès.'),
-              backgroundColor: const Color(0xFF006F1D),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
+        onPressed: _isLoading ? null : _handleCreateUser,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF006F1D),
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -477,15 +646,24 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
           elevation: 8,
           shadowColor: const Color(0xFF006F1D).withValues(alpha: 0.3),
         ),
-        child: const Text(
-          'Créer l\'utilisateur',
-          style: TextStyle(
-            fontFamily: 'Plus Jakarta Sans',
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : const Text(
+                'Créer l\'utilisateur',
+                style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }

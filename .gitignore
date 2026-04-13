@@ -43,3 +43,27 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase and Configuration Files (SECURITY: Do not commit!)
+google-services.json
+GoogleService-Info.plist
+lib/firebase_options.dart
+firebase_options.dart
+
+# Environment and Secret Files
+.env
+.env.local
+.env.*.local
+functions/.env
+functions/.env.local
+SETUP_EMAIL.js
+
+# Firebase Cloud Functions node_modules
+functions/node_modules/
+
+# IDE files with sensitive info
+.vscode/settings.json
+
+# OS generated files
+Thumbs.db
+.DS_Store

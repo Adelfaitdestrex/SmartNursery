@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:smartnursery/services/firebase/firebase_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
+import 'package:smartnursery/services/firebase/firebase_services.dart';
+import 'package:smartnursery/features/activities/screens/activities_page.dart';
+import 'package:smartnursery/features/auth/screens/reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +17,22 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseServices _firebaseServices = FirebaseServices();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthState();
+  }
+
+  void _checkAuthState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (FirebaseAuth.instance.currentUser != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ActivitiesPage()),
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -49,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(content: Text(error), backgroundColor: Colors.red),
       );
     } else {
-      // Connexion réussie → navigation vers la feed page
+      // Connexion réussie → navigation vers l'application principale
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const FeedPage()),
@@ -74,10 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: [
               const SizedBox(height: 80),
-              Image.asset(
-                'assets/images/enfants-jouent.png',
-                height: 180,
-              ),
+              Image.asset('assets/images/enfants-jouent.png', height: 180),
               const SizedBox(height: 20),
               const Text(
                 'Se connecter',
@@ -137,7 +153,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 30, top: 10),
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ResetPasswordScreen(),
+                        ),
+                      );
+                    },
                     child: const Text(
                       'Mot de passe oubliée ?',
                       style: TextStyle(color: Colors.green),
@@ -188,7 +210,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       size: 40,
                     ),
                   ),
-
                 ],
               ),
 
@@ -217,4 +238,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
