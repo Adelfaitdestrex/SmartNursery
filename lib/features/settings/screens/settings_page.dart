@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartnursery/features/profile/screens/profile_screen.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -140,20 +141,27 @@ class _TopActions extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Container(
-              height: 93,
-              decoration: BoxDecoration(
-                color: const Color(0xE0FFFFFF),
-                borderRadius: BorderRadius.circular(60),
-                boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.person_outline, size: 28),
-                  SizedBox(width: 8),
-                  Text('Mon\nprofil', style: TextStyle(fontSize: 36 / 1.8, fontWeight: FontWeight.w600, color: Color(0xA3000000))),
-                ],
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+              child: Container(
+                height: 93,
+                decoration: BoxDecoration(
+                  color: const Color(0xE0FFFFFF),
+                  borderRadius: BorderRadius.circular(60),
+                  boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.person_outline, size: 28),
+                    SizedBox(width: 8),
+                    Text('Mon\nprofil', style: TextStyle(fontSize: 36 / 1.8, fontWeight: FontWeight.w600, color: Color(0xA3000000))),
+                  ],
+                ),
               ),
             ),
           ),

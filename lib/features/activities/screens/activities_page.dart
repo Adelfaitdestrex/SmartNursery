@@ -1,25 +1,99 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
+import 'package:smartnursery/features/activities/models/activity_model.dart';
+import 'package:smartnursery/features/activities/widgets/activity_card.dart';
+import 'package:smartnursery/features/activities/screens/add_activity_page.dart';
 
-class ActivitiesPage extends StatelessWidget {
+class ActivitiesPage extends StatefulWidget {
   const ActivitiesPage({super.key});
+
+  @override
+  State<ActivitiesPage> createState() => _ActivitiesPageState();
+}
+
+class _ActivitiesPageState extends State<ActivitiesPage> {
+  late DateTime _selectedDate;
+  String _selectedFilter = 'Toutes';
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dates = _getActivityDates();
+    _selectedDate = dates.contains(today) ? today : (dates.isNotEmpty ? dates.first : today);
+  }
+
+  String _getDayLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final d = DateTime(date.year, date.month, date.day);
+    final diff = d.difference(today).inDays;
+    if (diff == 0) return 'Aujourd\'hui';
+    if (diff == 1) return 'Demain';
+    if (diff == -1) return 'Hier';
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    return days[d.weekday - 1];
+  }
+
+  List<DateTime> _getActivityDates() {
+    final dates = dummyActivities
+        .map((a) => DateTime(a.date.year, a.date.month, a.date.day))
+        .toSet()
+        .toList();
+    dates.sort();
+    return dates;
+  }
+
+  List<ActivityModel> get _filteredActivities {
+    // Filtrer d'abord par date
+    var list = dummyActivities.where((a) {
+      final aDate = DateTime(a.date.year, a.date.month, a.date.day);
+      return aDate == _selectedDate;
+    }).toList();
+
+    // Puis par statut
+    if (_selectedFilter == 'En cours') {
+      return list.where((a) => a.status == ActivityStatus.enCours).toList();
+    } else if (_selectedFilter == 'Terminées') {
+      return list.where((a) => a.status == ActivityStatus.terminee).toList();
+    } else if (_selectedFilter == 'À venir') {
+      return list.where((a) => a.status == ActivityStatus.aVenir).toList();
+    }
+    return list;
+  }
+
+  void _navigateToAddActivity() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddActivityPage()),
+    );
+    if (result == true) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.pageBackground,
+      backgroundColor: const Color(0xFFF4FBF4),
       bottomNavigationBar: const SafeArea(top: false, child: SharedBottomNavbar(currentIndex: 3)),
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 24, right: 8),
+        child: FloatingActionButton(
+          onPressed: _navigateToAddActivity,
+          backgroundColor: const Color(0xFF006F1D),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            // Header
             SharedHeader(
-              title: 'Activité',
+              title: 'Activités',
               leftWidget: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
               leftLabel: null,
               onLeftTap: () {
@@ -29,127 +103,94 @@ class ActivitiesPage extends StatelessWidget {
                 );
               },
             ),
-
-            const SizedBox(height: 16),
-
-            // Contenu scrollable
+            const SizedBox(height: 24),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Top header intro
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF1B941B),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: SvgPicture.asset(
-                              'assets/icons/book-open-text-white-background.svg',
-                              width: 20,
-                              height: 20,
-                              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                    // Ajouter nouvelle activité card
+                    GestureDetector(
+                      onTap: _navigateToAddActivity,
+                      child: Container(
+                        height: 113,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5F8E5),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x40000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 4),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
-                              'Activité du jour',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
+                            Icon(Icons.widgets, size: 55, color: Colors.orange), // placeholder
+                            SizedBox(width: 12),
                             Text(
-                              'Choisir une activité a explorer',
+                              'Ajouter une nouvelle activité',
                               style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade600,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0x80000000),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Add new activity card
-                    Container(
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: AppColors.activityCardAddBg,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                        border: Border.all(color: Colors.black12, width: 1.0),
                       ),
+                    ),
+                    const SizedBox(height: 32),
+                    // Date Selector
+                    SizedBox(
+                      height: 79,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _getActivityDates().map((date) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: _buildDateChip(_getDayLabel(date), date.day.toString(), date),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Filters
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          const SizedBox(width: 24),
-                          Image.asset(
-                            'assets/icons/Icon.png', // Fallback as assumed grid icon
-                            width: 60,
-                            height: 60,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.grid_view_rounded, size: 50, color: Colors.orange);
-                            },
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Text(
-                              'Ajouter une nouvelle activité',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
+                          _buildFilterChip('Toutes'),
+                          const SizedBox(width: 12),
+                          _buildFilterChip('En cours'),
+                          const SizedBox(width: 12),
+                          _buildFilterChip('Terminées'),
+                          const SizedBox(width: 12),
+                          _buildFilterChip('À venir'),
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // Red Card
-                    _buildActivityCard(
-                      color: AppColors.activityCardRed,
-                      textColor: Colors.white,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Yellow Card
-                    _buildActivityCard(
-                      color: AppColors.activityCardYellow,
-                      textColor: Colors.white, 
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Teal Card
-                    _buildActivityCard(
-                      color: AppColors.activityCardTeal,
-                      textColor: Colors.white,
-                    ),
-                    
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 32),
+                    // Activities List
+                    if (_filteredActivities.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.0),
+                          child: Text(
+                            'Aucune activité pour ce filtre.',
+                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                          ),
+                        ),
+                      )
+                    else
+                      ..._filteredActivities.map((activity) => ActivityCard(activity: activity)),
+                    const SizedBox(height: 60), // Bottom padding
                   ],
                 ),
               ),
@@ -160,85 +201,75 @@ class ActivitiesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActivityCard({
-    required Color color,
-    required Color textColor,
-  }) {
-    return Container(
-      height: 110,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
-        border: Border.all(color: Colors.black12, width: 1.0),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 20),
-          // Left Icon
-          Container(
-            width: 55,
-            height: 55,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.35),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Center(
-              child: SvgPicture.asset(
-                'assets/icons/book-open-text-black-background.svg',
-                width: 30,
-                height: 30,
-                colorFilter: ColorFilter.mode(textColor, BlendMode.srcIn),
+  Widget _buildDateChip(String label, String dateNumber, DateTime date) {
+    final bool isSelected = _selectedDate.year == date.year && _selectedDate.month == date.month && _selectedDate.day == date.day;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedDate = date;
+        });
+      },
+      child: Container(
+        width: 80,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF006F1D) : const Color(0xFFECF6ED),
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: isSelected
+              ? const [BoxShadow(color: Color(0x0D000000), blurRadius: 2, offset: Offset(0, 1))]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? const Color(0xFFEAFFE2) : const Color(0xFF546259),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          // Center Text
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Activité du jour',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                ),
-                Text(
-                  'Choisir une activité a explorer',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: textColor.withOpacity(0.9),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 4),
+            Text(
+              dateNumber,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? const Color(0xFFEAFFE2) : const Color(0xFF546259),
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    final bool isSelected = _selectedFilter == label;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF006F1D) : const Color(0xFFD6E6DB),
+          borderRadius: BorderRadius.circular(9999),
+          boxShadow: isSelected
+              ? const [BoxShadow(color: Color(0x0D000000), blurRadius: 2, offset: Offset(0, 1))]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? const Color(0xFFEAFFE2) : const Color(0xFF546259),
           ),
-          // Right arrow button
-          Container(
-            width: 35,
-            height: 35,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.35),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.arrow_forward,
-              color: textColor,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 20),
-        ],
+        ),
       ),
     );
   }

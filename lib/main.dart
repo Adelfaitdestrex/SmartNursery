@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:smartnursery/design_system/app_theme.dart';
+import 'package:smartnursery/features/profile/screens/Profil_enfant.dart';
 import 'package:smartnursery/features/admin/screens/admin_add_child_screen.dart';
 import 'package:smartnursery/features/admin/screens/admin_add_user_screen.dart';
 import 'package:smartnursery/features/admin/screens/admin_dashboard_screen.dart';
@@ -9,6 +10,10 @@ import 'package:smartnursery/features/admin/screens/admin_users_screen.dart';
 import 'package:smartnursery/services/firebase/firebase_options.dart';
 import 'package:smartnursery/features/admin/screens/admin_settings_screen.dart';
 import 'package:smartnursery/features/classes/screens/classes_page.dart';
+import 'package:smartnursery/features/profile/screens/Profil_enfant.dart';
+import 'package:smartnursery/features/profile/screens/profile_screen.dart';
+
+import 'features/activities/screens/activities_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +30,7 @@ class SmartNurseryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SmartNursery',
       theme: AppTheme.light,
-      home: const AdminScreen(),
+      home: const ActivitiesPage(),
     );
   }
 }
