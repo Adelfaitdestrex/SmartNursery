@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/services/firebase/firebase_services.dart';
 
@@ -608,6 +607,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
         _roles[_selectedRoleIndex],
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -620,6 +620,8 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
       Navigator.pop(context);
       return;
     }
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

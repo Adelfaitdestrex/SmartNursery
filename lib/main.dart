@@ -6,12 +6,22 @@ import 'package:smartnursery/features/auth/screens/login_screen.dart';
 import 'package:smartnursery/features/activities/screens/activities_page.dart';
 import 'package:smartnursery/features/auth/screens/restricted_access.dart';
 import 'package:smartnursery/features/auth/screens/role_selection.dart';
+import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 import 'package:smartnursery/services/firebase/firebase_options.dart';
-
+import 'package:smartnursery/features/classes/screens/calendier_abscence.dart';
+import 'package:smartnursery/features/classes/screens/time_selection.dart';
+import 'package:smartnursery/features/auth/screens/splashScreen.dart';
+import 'package:intl/intl.dart';
+// 1. AJOUT: Importation obligatoire pour initialiser les dates locales
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 2. AJOUT: Initialisation du français AVANT de lancer l'application
+  await initializeDateFormatting('fr', null);
+
   runApp(const SmartNurseryApp());
 }
 
@@ -24,31 +34,7 @@ class SmartNurseryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SmartNursery',
       theme: AppTheme.light,
-      home: const LoginScreen(),
-    );
-  }
-}
-
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasData) {
-          return const ActivitiesPage();
-        }
-
-        return const LoginScreen();
-      },
+      home: const CalendarPage(),
     );
   }
 }

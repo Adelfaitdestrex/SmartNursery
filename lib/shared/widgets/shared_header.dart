@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
-import 'package:smartnursery/features/settings/screens/settings_page.dart'; // adapte le chemin
+import 'package:smartnursery/features/settings/screens/settings_page.dart';
+import 'package:smartnursery/features/notifiacation/notification_screen.dart';
 
 class SharedHeader extends StatelessWidget {
   final String title;
@@ -8,6 +9,7 @@ class SharedHeader extends StatelessWidget {
   final String? leftLabel;
   final VoidCallback? onLeftTap;
   final IconData rightIcon;
+  final VoidCallback? onRightTap;
 
   const SharedHeader({
     super.key,
@@ -16,6 +18,7 @@ class SharedHeader extends StatelessWidget {
     this.leftLabel = 'Setting',
     this.onLeftTap,
     this.rightIcon = Icons.notifications_none,
+    this.onRightTap,
   });
 
   @override
@@ -83,7 +86,17 @@ class SharedHeader extends StatelessWidget {
             width: 84,
             child: Align(
               alignment: Alignment.centerRight,
-              child: Icon(rightIcon, color: Colors.white, size: 30),
+              child: GestureDetector(
+                onTap: onRightTap ??
+                    () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationScreen(),
+                          ),
+                        ),
+                behavior: HitTestBehavior.opaque,
+                child: Icon(rightIcon, color: Colors.white, size: 30),
+              ),
             ),
           ),
         ],

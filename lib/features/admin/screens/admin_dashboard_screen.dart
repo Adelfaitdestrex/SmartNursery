@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartnursery/features/notifiacation/notification_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -14,10 +15,14 @@ class AdminDashboardScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildHeader(),
+                _buildHeader(context),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 120, left: 24, right: 24),
+                    padding: const EdgeInsets.only(
+                      bottom: 120,
+                      left: 24,
+                      right: 24,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -37,7 +42,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             // FAB
             Positioned(
               bottom: 40,
@@ -65,7 +70,7 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       color: const Color(0xFFD6E6DB),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -97,10 +102,16 @@ class AdminDashboardScreen extends StatelessWidget {
               ),
             ],
           ),
-          const Icon(
-            Icons.notifications_none_outlined,
-            color: Color(0xFF006F1D),
-            size: 24,
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationScreen()),
+            ),
+            child: const Icon(
+              Icons.notifications_none_outlined,
+              color: Color(0xFF006F1D),
+              size: 24,
+            ),
           ),
         ],
       ),
@@ -145,14 +156,32 @@ class AdminDashboardScreen extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       childAspectRatio: 159 / 185, // rough estimate from Figma dimensions
       children: [
-        _buildStatCard('Total Élèves', '120', const Color(0xFF91F78E), Icons.face, const Color(0xFF28352E)),
-        _buildStatCard('Enseignants', '15', const Color(0xFFA3F69C), Icons.group, const Color(0xFF28352E)),
-        _buildStatCard('Classes', '8', const Color(0xFFB4FDB4), Icons.school, const Color(0xFF28352E)),
         _buildStatCard(
-          'Absents', 
-          '4', 
-          const Color(0xFFFD795A).withValues(alpha: 0.2), 
-          Icons.calendar_month, 
+          'Total Élèves',
+          '120',
+          const Color(0xFF91F78E),
+          Icons.face,
+          const Color(0xFF28352E),
+        ),
+        _buildStatCard(
+          'Enseignants',
+          '15',
+          const Color(0xFFA3F69C),
+          Icons.group,
+          const Color(0xFF28352E),
+        ),
+        _buildStatCard(
+          'Classes',
+          '8',
+          const Color(0xFFB4FDB4),
+          Icons.school,
+          const Color(0xFF28352E),
+        ),
+        _buildStatCard(
+          'Absents',
+          '4',
+          const Color(0xFFFD795A).withValues(alpha: 0.2),
+          Icons.calendar_month,
           const Color(0xFFA73B21),
           iconColor: const Color(0xFFA73B21),
         ),
@@ -160,7 +189,14 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color iconBgColor, IconData icon, Color valueColor, {Color? iconColor}) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    Color iconBgColor,
+    IconData icon,
+    Color valueColor, {
+    Color? iconColor,
+  }) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -178,7 +214,11 @@ class AdminDashboardScreen extends StatelessWidget {
               color: iconBgColor,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: iconColor ?? const Color(0xFF065F18), size: 24),
+            child: Icon(
+              icon,
+              color: iconColor ?? const Color(0xFF065F18),
+              size: 24,
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +275,10 @@ class AdminDashboardScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFD6E6DB),
                   borderRadius: BorderRadius.circular(24),
@@ -263,7 +306,7 @@ class AdminDashboardScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -347,8 +390,8 @@ class AdminDashboardScreen extends StatelessWidget {
           children: [
             Expanded(
               child: _buildActionBtn(
-                'Signaler Absence', 
-                Icons.notifications_active_outlined, 
+                'Signaler Absence',
+                Icons.notifications_active_outlined,
                 const Color(0xFFA73B21).withValues(alpha: 0.1),
                 const Color(0xFFA73B21),
               ),
@@ -356,8 +399,8 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: _buildActionBtn(
-                'Ajouter Élève', 
-                Icons.person_add_outlined, 
+                'Ajouter Élève',
+                Icons.person_add_outlined,
                 const Color(0xFF1C6D25).withValues(alpha: 0.1),
                 const Color(0xFF1C6D25),
               ),
@@ -369,8 +412,8 @@ class AdminDashboardScreen extends StatelessWidget {
           children: [
             Expanded(
               child: _buildActionBtn(
-                'Nouvelle Classe', 
-                Icons.meeting_room_outlined, 
+                'Nouvelle Classe',
+                Icons.meeting_room_outlined,
                 const Color(0xFF1C6D25).withValues(alpha: 0.1),
                 const Color(0xFF1C6D25),
               ),
@@ -378,19 +421,26 @@ class AdminDashboardScreen extends StatelessWidget {
             const SizedBox(width: 16),
             const Spacer(),
           ],
-        )
+        ),
       ],
     );
   }
 
-  Widget _buildActionBtn(String title, IconData icon, Color iconBgColor, Color iconColor) {
+  Widget _buildActionBtn(
+    String title,
+    IconData icon,
+    Color iconBgColor,
+    Color iconColor,
+  ) {
     return Container(
       height: 130,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFFA6B6AB).withValues(alpha: 0.15)),
+        border: Border.all(
+          color: const Color(0xFFA6B6AB).withValues(alpha: 0.15),
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -431,7 +481,7 @@ class AdminDashboardScreen extends StatelessWidget {
             color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, 1),
             blurRadius: 2,
-          )
+          ),
         ],
       ),
       child: Column(
@@ -447,14 +497,17 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          
+
           Stack(
             children: [
               Positioned(
                 left: 7,
                 top: 8,
                 bottom: 20,
-                child: Container(width: 2, color: const Color(0xFFA6B6AB).withValues(alpha: 0.3)),
+                child: Container(
+                  width: 2,
+                  color: const Color(0xFFA6B6AB).withValues(alpha: 0.3),
+                ),
               ),
               Column(
                 children: [
@@ -490,14 +543,16 @@ class AdminDashboardScreen extends StatelessWidget {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () {},
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: const Color(0xFFA6B6AB).withValues(alpha: 0.3)),
+                side: BorderSide(
+                  color: const Color(0xFFA6B6AB).withValues(alpha: 0.3),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(48),
@@ -570,7 +625,10 @@ class AdminDashboardScreen extends StatelessWidget {
                 if (tag != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: tagColor,
                       borderRadius: BorderRadius.circular(24),

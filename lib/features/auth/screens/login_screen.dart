@@ -7,7 +7,13 @@ import 'package:smartnursery/features/auth/screens/reset_password_screen.dart';
 import 'package:smartnursery/features/auth/screens/restricted_access.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  /// Si [autoRedirect] est true (défaut), redirige automatiquement
+  /// vers la page principale si une session Firebase est déjà active.
+  /// Mettre à false quand on navigue intentionnellement vers le login
+  /// (ex: depuis RoleSelectionScreen) pour forcer l'affichage du formulaire.
+  final bool autoRedirect;
+
+  const LoginScreen({super.key, this.autoRedirect = true});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -26,6 +32,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _checkAuthState() {
+    // Ne pas rediriger si autoRedirect est désactivé (navigation intentionnelle
+    // vers la page login, ex: depuis RoleSelectionScreen)
+    if (!widget.autoRedirect) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (FirebaseAuth.instance.currentUser != null) {
         Navigator.of(context).pushReplacement(

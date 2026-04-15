@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartnursery/features/auth/screens/login_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({Key? key}) : super(key: key);
@@ -81,7 +82,12 @@ class RoleSelectionScreen extends StatelessWidget {
                   color: const Color(0xFF4FC3F7),
                   imagePath: 'assets/images/parent.png',
                   onTap: () {
-                    // Navigator.pushNamed(context, '/parent');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(autoRedirect: false),
+                        ),
+                      );
                   },
                 ),
                 const SizedBox(height: 20),
@@ -91,7 +97,12 @@ class RoleSelectionScreen extends StatelessWidget {
                   color: const Color(0xFFF5A623),
                   imagePath: 'assets/images/teacher.png',
                   onTap: () {
-                    // Navigator.pushNamed(context, '/teacher');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(autoRedirect: false),
+                        ),
+                      );
                   },
                 ),
                 const SizedBox(height: 20),
@@ -101,7 +112,12 @@ class RoleSelectionScreen extends StatelessWidget {
                   color: const Color(0xFF5DBE4A),
                   imagePath: 'assets/images/director.png',
                   onTap: () {
-                    // Navigator.pushNamed(context, '/director');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(autoRedirect: false),
+                        ),
+                      );
                   },
                 ),
               ],

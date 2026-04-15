@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/features/settings/screens/settings_page.dart';
 import 'package:smartnursery/features/admin/screens/admin_redirection_screen.dart';
 import 'package:smartnursery/features/auth/screens/login_screen.dart';
+import 'package:smartnursery/features/A_propos_enfant/redirection_info_enfant.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -205,15 +206,6 @@ class _MainProfileCard extends StatelessWidget {
             const SizedBox(height: 16),
             const _ChildCard(),
             const SizedBox(height: 24),
-            const Text(
-              'A propos de votre enfant',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 16),
             const _InfoField(
               label: 'Nom',
               value: 'jean dupant',
@@ -237,14 +229,7 @@ class _MainProfileCard extends StatelessWidget {
                 ).push(MaterialPageRoute(builder: (_) => const AdminScreen()));
               },
             ),
-            const SizedBox(height: 12),
-            _CustomButton(
-              text: 'Modifier le profil',
-              backgroundColor: const Color(0xFF89B832),
-              textColor: Colors.white,
-              borderColor: const Color(0xFF8FBC3B),
-              onTap: () {},
-            ),
+
             const SizedBox(height: 12),
             _CustomButton(
               text: 'Déconnecté',
@@ -273,72 +258,80 @@ class _ChildCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 95,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFE4F3C9), Color(0xFF89B832)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ChildInfoScreen()));
+      },
+      child: Container(
+        height: 95,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFE4F3C9), Color(0xFF89B832)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
         ),
-      ),
-      child: const Row(
-        children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.face, size: 50, color: Color(0xFF89B832)),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Adam',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Color(0x40000000),
-                        offset: Offset(0, 4),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  '3 ans',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFFF5F5F5),
-                    shadows: [
-                      Shadow(
-                        color: Color(0x40000000),
-                        offset: Offset(0, 4),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  'Young explorers',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFFF5F5F5),
-                  ),
-                ),
-              ],
+        child: Row(
+          children: [
+            const CircleAvatar(
+              radius: 36,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.face, size: 50, color: Color(0xFF89B832)),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Adam',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x40000000),
+                          offset: Offset(0, 4),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '3 ans',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFF5F5F5),
+                      shadows: [
+                        Shadow(
+                          color: Color(0x40000000),
+                          offset: Offset(0, 4),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'Young explorers',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFF5F5F5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -357,56 +350,43 @@ class _InfoField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 73,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFF8FBC3B)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x40000000),
-            offset: Offset(0, 4),
-            blurRadius: 4,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF4F7607),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: const Color(0xFF89B832),
-            radius: 24,
-            child: Icon(iconData, color: Colors.white, size: 28),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF89B832),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
+          child: Row(
+            children: [
+              Icon(iconData, size: 22, color: const Color(0xFF89B832)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
+                    color: Colors.black87,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

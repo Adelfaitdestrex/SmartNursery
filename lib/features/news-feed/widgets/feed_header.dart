@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/features/settings/screens/settings_page.dart';
+import 'package:smartnursery/features/notifiacation/notification_screen.dart';
 
 class FeedHeader extends StatelessWidget {
   const FeedHeader({super.key});
@@ -49,12 +50,12 @@ class FeedHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 GestureDetector(
-                  onTap: () {
-                    // TODO: Navigate to notifications page
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Notifications')),
-                    );
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationScreen(),
+                    ),
+                  ),
                   child: const Icon(
                     Icons.notifications_outlined,
                     color: Colors.white,
