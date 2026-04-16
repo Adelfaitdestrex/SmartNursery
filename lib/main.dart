@@ -12,8 +12,8 @@ import 'package:smartnursery/features/classes/screens/calendier_abscence.dart';
 import 'package:smartnursery/features/classes/screens/time_selection.dart';
 import 'package:smartnursery/features/auth/screens/splashScreen.dart';
 import 'package:intl/intl.dart';
-// 1. AJOUT: Importation obligatoire pour initialiser les dates locales
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:smartnursery/features/classes/screens/instance_classe.dart' ;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +34,8 @@ class SmartNurseryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SmartNursery',
       theme: AppTheme.light,
-      home: const CalendarPage(),
+      home: const  SmartNurseryWelcomePage()
+      ,
     );
   }
 }

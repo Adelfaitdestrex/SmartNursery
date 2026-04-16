@@ -4,6 +4,10 @@ import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 
+
+
+import 'package:smartnursery/features/classes/screens/instance_classe.dart';
+
 class ClassesPage extends StatelessWidget {
   const ClassesPage({super.key});
 
@@ -45,12 +49,21 @@ class ClassesPage extends StatelessWidget {
                           ageGroup: '5 mois-2 ans',
                           backgroundColor: AppColors.activityCardTeal,
                           titleColor: const Color(0xFF0F5A4D),
-                          buttonColor: const Color(0xFF48C9B0), // It usually is slightly offset from bg, let's use a similar or lighter teal
+                          buttonColor: const Color(0xFF48C9B0),
                           imagePath: 'assets/icons/enfant_classe1.png',
                           imageWidth: 60,
                           imageHeight: 60,
                           topOffset: -20,
                           leftOffset: -20,
+                          // NOUVEAU : Ajout de la navigation ici
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SmartNurseryClassPage(), // Votre page cible
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -73,6 +86,7 @@ class ClassesPage extends StatelessWidget {
                           imageHeight: 65,
                           topOffset: -20,
                           leftOffset: -10,
+                          // Pas de onTap ici pour l'instant
                         ),
                       ),
                     ),
@@ -95,6 +109,7 @@ class ClassesPage extends StatelessWidget {
                           imageHeight: 50,
                           topOffset: -15,
                           leftOffset: -15,
+                          // Pas de onTap ici pour l'instant
                         ),
                       ),
                     ),
@@ -120,6 +135,7 @@ class _ClassCard extends StatelessWidget {
   final double imageHeight;
   final double topOffset;
   final double leftOffset;
+  final VoidCallback? onTap; // NOUVEAU : Déclaration de la variable onTap
 
   const _ClassCard({
     required this.title,
@@ -132,101 +148,104 @@ class _ClassCard extends StatelessWidget {
     required this.imageHeight,
     required this.topOffset,
     required this.leftOffset,
+    this.onTap, // NOUVEAU : Initialisation dans le constructeur
   });
 
   @override
   Widget build(BuildContext context) {
-    // We add margin so the Positioned image doesn't get cut off by screen edges
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Main Card Container
-        Container(
-          width: 260,
-          margin: const EdgeInsets.only(top: 15, left: 15), // Reserve space for the image sticking out
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-            // A dark shadow representing the card border offset shown in figma
-            border: Border.all(color: Colors.black12, width: 1.0),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: titleColor,
+    // NOUVEAU : On englobe toute la carte dans un GestureDetector
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Main Card Container
+          Container(
+            width: 260,
+            margin: const EdgeInsets.only(top: 15, left: 15),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                ageGroup,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              ],
+              border: Border.all(color: Colors.black12, width: 1.0),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: titleColor,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 20),
-              // Button "Entrer"
-              Container(
-                width: 140,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: buttonColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  ageGroup,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-                child: const Center(
-                  child: Text(
-                    'Entrer',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                const SizedBox(height: 20),
+                // Button "Entrer"
+                Container(
+                  width: 140,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: buttonColor,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Entrer',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Floating Image
-        Positioned(
-          top: topOffset,
-          left: leftOffset,
-          child: Image.asset(
-            imagePath,
-            width: imageWidth,
-            height: imageHeight,
-            errorBuilder: (_, __, ___) => const Icon(
-              Icons.image_not_supported, 
-              size: 40,
-              color: Colors.black45,
+              ],
             ),
           ),
-        ),
-      ],
+
+          // Floating Image
+          Positioned(
+            top: topOffset,
+            left: leftOffset,
+            child: Image.asset(
+              imagePath,
+              width: imageWidth,
+              height: imageHeight,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.image_not_supported,
+                size: 40,
+                color: Colors.black45,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

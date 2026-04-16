@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/features/news-feed/screen/create_post_page.dart';
 
+
 class NewPostContainer extends StatelessWidget {
   const NewPostContainer({super.key});
 
   static const String _userImageUrl =
-      'https://www.figma.com/api/mcp/asset/c019e77c-90d7-4150-980b-17d36b67c142';
+      'assets/images/apps-add_logo.png';
 
   @override
   Widget build(BuildContext context) {

@@ -10,6 +10,7 @@ class FeedPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // On garde ta barre de navigation
       bottomNavigationBar: const SafeArea(top: false, child: SharedBottomNavbar()),
       body: SafeArea(
         bottom: false,
@@ -21,11 +22,12 @@ class FeedPage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: Column(
-                  children: const [
-                    NewPostContainer(),
-                    SizedBox(height: 40),
-                    FeedPostCard(),
-                    SizedBox(height: 16),
+                  // CORRECTION : Suppression du 'const' ici car les widgets enfants sont dynamiques
+                  children: [
+                    const NewPostContainer(),
+                    const SizedBox(height: 40),
+                    const FeedPostCard(), // Ton post style Instagram
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
