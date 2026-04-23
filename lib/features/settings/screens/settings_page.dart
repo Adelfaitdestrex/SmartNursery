@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/features/profile/screens/profile_screen.dart';
+import 'package:smartnursery/services/theme_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -16,17 +17,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = ThemeProvider.of(context);
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF3E8E2),
-              Color(0xFFC0E4D0),
-              Color(0xFFE0E6E2),
-            ],
+            colors: [Color(0xFFF3E8E2), Color(0xFFC0E4D0), Color(0xFFE0E6E2)],
             stops: [0.0, 0.23558, 0.47115],
           ),
         ),
@@ -39,6 +38,23 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 18),
                 const _TopActions(),
                 const SizedBox(height: 22),
+                _SectionCard(
+                  title: 'Apparence',
+                  icon: Icons.brightness_4,
+                  children: [
+                    _SettingTile(
+                      icon: Icons.dark_mode_outlined,
+                      title: 'Mode nuit',
+                      subtitle: 'Activez le thème\nsombre',
+                      value: themeNotifier.isDarkMode,
+                      onChanged: (v) {
+                        themeNotifier.setDarkMode(v);
+                      },
+                      outlined: true,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 _SectionCard(
                   title: 'Notification',
                   icon: Icons.notifications_active,
@@ -81,7 +97,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: 'Contrôle\nparental',
                       subtitle: 'Que tout reste sur et\namusant',
                       value: parentalControlEnabled,
-                      onChanged: (v) => setState(() => parentalControlEnabled = v),
+                      onChanged: (v) =>
+                          setState(() => parentalControlEnabled = v),
                       outlined: true,
                     ),
                   ],
@@ -114,7 +131,13 @@ class _Header extends StatelessWidget {
                 fontSize: 48 / 1.4,
                 fontWeight: FontWeight.w700,
                 color: Color(0xCC000000),
-                shadows: [Shadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                shadows: [
+                  Shadow(
+                    color: Color(0x40000000),
+                    offset: Offset(0, 4),
+                    blurRadius: 4,
+                  ),
+                ],
               ),
             ),
             SizedBox(width: 8),
@@ -124,15 +147,58 @@ class _Header extends StatelessWidget {
         SizedBox(height: 6),
         Text(
           'Personnalisez votre expérience',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Color(0x4D000000)),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: Color(0x4D000000),
+          ),
         ),
       ],
     );
   }
 }
 
-class _TopActions extends StatelessWidget {
+class _TopActions extends StatefulWidget {
   const _TopActions();
+
+  @override
+  State<_TopActions> createState() => _TopActionsState();
+}
+
+class _TopActionsState extends State<_TopActions>
+    with TickerProviderStateMixin {
+  late AnimationController _profileScaleController;
+  late AnimationController _settingsScaleController;
+  late Animation<double> _profileScaleAnimation;
+  late Animation<double> _settingsScaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileScaleController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _settingsScaleController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _profileScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(_profileScaleController);
+    _settingsScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(_settingsScaleController);
+  }
+
+  @override
+  void dispose() {
+    _profileScaleController.dispose();
+    _settingsScaleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,42 +206,113 @@ class _TopActions extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
+          // Bouton "Mon profil" INACTIF (petit - flex: 1)
           Expanded(
-            child: GestureDetector(
-              onTap: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                );
-              },
-              child: Container(
-                height: 93,
-                decoration: BoxDecoration(
-                  color: const Color(0xE0FFFFFF),
-                  borderRadius: BorderRadius.circular(60),
-                  boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.person_outline, size: 28),
-                    SizedBox(width: 8),
-                    Text('Mon\nprofil', style: TextStyle(fontSize: 36 / 1.8, fontWeight: FontWeight.w600, color: Color(0xA3000000))),
-                  ],
+            flex: 1,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => _profileScaleController.forward(),
+              onExit: (_) => _profileScaleController.reverse(),
+              child: GestureDetector(
+                onTapDown: (_) => _profileScaleController.forward(),
+                onTapUp: (_) {
+                  _profileScaleController.reverse();
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                },
+                onTapCancel: () => _profileScaleController.reverse(),
+                child: ScaleTransition(
+                  scale: _profileScaleAnimation,
+                  child: Container(
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F0F0),
+                      borderRadius: BorderRadius.circular(40),
+                      border: Border.all(
+                        color: const Color(0xFFE0E0E0),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0x20000000),
+                          offset: const Offset(0, 4),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.person_outline,
+                          size: 22,
+                          color: Color(0xFF888888),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Profil',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 16),
+          // Bouton "Paramètres" ACTIF (grand - flex: 2)
           Expanded(
-            child: Container(
-              height: 58,
-              decoration: BoxDecoration(
-                color: const Color(0xFF89B832),
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
-              ),
-              child: const Center(
-                child: Text('Paramétres', style: TextStyle(fontSize: 16, color: Colors.black)),
+            flex: 2,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => _settingsScaleController.forward(),
+              onExit: (_) => _settingsScaleController.reverse(),
+              child: ScaleTransition(
+                scale: _settingsScaleAnimation,
+                child: Container(
+                  height: 93,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF63A6E8), Color(0xFF4A8FD8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(60),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF63A6E8).withOpacity(0.4),
+                        offset: const Offset(0, 8),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.settings_outlined,
+                        size: 28,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Paramètres',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -204,7 +341,13 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFF5F8FF),
         borderRadius: BorderRadius.circular(30),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            offset: Offset(0, 4),
+            blurRadius: 4,
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -218,7 +361,13 @@ class _SectionCard extends StatelessWidget {
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: Color(0xB8000000),
-                  shadows: [Shadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                  shadows: [
+                    Shadow(
+                      color: Color(0x40000000),
+                      offset: Offset(0, 4),
+                      blurRadius: 4,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -266,9 +415,23 @@ class _SettingTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 38 / 1.9, fontWeight: FontWeight.w700, color: Color(0xB3000000))),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 38 / 1.9,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xB3000000),
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0x40000000))),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0x40000000),
+                  ),
+                ),
               ],
             ),
           ),

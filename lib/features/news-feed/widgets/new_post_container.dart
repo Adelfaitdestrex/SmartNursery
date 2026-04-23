@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/features/news-feed/screen/create_post_page.dart';
 
-
 class NewPostContainer extends StatelessWidget {
   const NewPostContainer({super.key});
 
-  static const String _userImageUrl =
-      'assets/images/apps-add_logo.png';
+  static const String _userImageUrl = 'assets/icons/apps-add_logo.png.png';
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +31,10 @@ class NewPostContainer extends StatelessWidget {
               width: 65,
               height: 65,
               clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-              child: Image.network(_userImageUrl, fit: BoxFit.cover),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Image.asset(_userImageUrl, fit: BoxFit.cover),
             ),
             const SizedBox(width: 35),
             const Expanded(

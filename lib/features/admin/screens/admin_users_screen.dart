@@ -1,7 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
+import 'package:smartnursery/features/classes/models/class_model.dart';
+import 'package:smartnursery/features/classes/services/class_service.dart';
 import 'admin_add_user_screen.dart';
 import 'admin_add_child_screen.dart';
+import 'admin_edit_user_screen.dart';
+import 'admin_manage_classes_screen.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -17,7 +22,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     'Tous',
     'Parents',
     'Enseignants',
-    'Administrateurs'
+    'Administrateurs',
   ];
 
   @override
@@ -46,13 +51,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         _buildUsersList(),
                         const SizedBox(height: 32),
                         _buildBottomStatsRow(),
+                        const SizedBox(height: 32),
+                        _buildClassesSection(),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
-            
+
             // FABs
             Positioned(
               bottom: 40,
@@ -66,11 +73,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminAddChildScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const AdminAddChildScreen(),
+                        ),
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
@@ -85,7 +97,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: const [
-                          Icon(Icons.child_care, color: Color(0xFF006F1D), size: 20),
+                          Icon(
+                            Icons.child_care,
+                            color: Color(0xFF006F1D),
+                            size: 20,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Ajouter Enfant',
@@ -105,7 +121,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminAddUserScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const AdminAddUserScreen(),
+                        ),
                       );
                     },
                     child: Container(
@@ -116,10 +134,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFF006F1D),
-                            Color(0xFF006118),
-                          ],
+                          colors: [Color(0xFF006F1D), Color(0xFF006118)],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -129,7 +144,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.person_add_alt_1, color: Colors.white, size: 28),
+                      child: const Icon(
+                        Icons.person_add_alt_1,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                     ),
                   ),
                 ],
@@ -154,9 +173,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 onTap: () => Navigator.maybePop(context),
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: const BoxDecoration(shape: BoxShape.circle),
                   child: const Icon(
                     Icons.menu,
                     color: Color(0xFF006F1D),
@@ -211,7 +228,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      const Icon(Icons.search, color: Color(0x80546259), size: 18),
+                      const Icon(
+                        Icons.search,
+                        color: Color(0x80546259),
+                        size: 18,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
@@ -243,7 +264,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   color: const Color(0xFFD6E6DB),
                   borderRadius: BorderRadius.circular(48),
                 ),
-                child: const Icon(Icons.tune, color: Color(0xFF006F1D), size: 24),
+                child: const Icon(
+                  Icons.tune,
+                  color: Color(0xFF006F1D),
+                  size: 24,
+                ),
               ),
             ],
           ),
@@ -266,9 +291,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF006F1D) : const Color(0xFFECF6ED),
+                    color: isSelected
+                        ? const Color(0xFF006F1D)
+                        : const Color(0xFFECF6ED),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   alignment: Alignment.center,
@@ -278,7 +308,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       fontFamily: 'Inter',
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: isSelected ? const Color(0xFFEAFFE2) : const Color(0xFF546259),
+                      color: isSelected
+                          ? const Color(0xFFEAFFE2)
+                          : const Color(0xFF546259),
                     ),
                   ),
                 ),
@@ -342,48 +374,63 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Widget _buildUsersList() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: [
-          const _UserCard(
-            name: 'Sophie Martin',
-            role: 'Enseignant',
-            roleColor: Color(0xFFB4FDB4),
-            roleTextColor: Color(0xFF1F632C),
-            avatarUrl: 'https://i.pravatar.cc/150?img=43',
-            isActive: true,
+    Query query = FirebaseFirestore.instance.collection('users');
+    if (_selectedTabIndex != 0) {
+      query = query.where(
+        'role',
+        isEqualTo: _tabs[_selectedTabIndex].substring(
+          0,
+          _tabs[_selectedTabIndex].length - 1,
+        ),
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: query.snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Text('Something went wrong');
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("No users found"));
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: snapshot.data!.docs.map((DocumentSnapshot document) {
+              Map<String, dynamic> data =
+                  document.data()! as Map<String, dynamic>;
+              return _UserCard(
+                name: data['name'] ?? 'No Name',
+                role: data['role'] ?? 'No Role',
+                roleColor: const Color(0xFFB4FDB4),
+                roleTextColor: const Color(0xFF1F632C),
+                avatarUrl:
+                    data['profileImageUrl'] ?? 'https://i.pravatar.cc/150',
+                isActive: data['isActive'] ?? true,
+                isInactiveOpacity: !(data['isActive'] ?? true),
+                onDelete: () => document.reference.delete(),
+                onEdit: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AdminEditUserScreen(user: document),
+                    ),
+                  );
+                },
+              );
+            }).toList(),
           ),
-          const SizedBox(height: 16),
-          const _UserCard(
-            name: 'Jean Dupont',
-            role: 'Parent',
-            roleColor: Color(0xFFA3F69C),
-            roleTextColor: Color(0xFF065F18),
-            avatarUrl: 'https://i.pravatar.cc/150?img=11',
-            isActive: true,
-          ),
-          const SizedBox(height: 16),
-          const _UserCard(
-            name: 'Claire Bernard',
-            role: 'Admin',
-            roleColor: Color(0xFFDEECE1),
-            roleTextColor: Color(0xFF546259),
-            avatarUrl: 'https://i.pravatar.cc/150?img=5',
-            isActive: false,
-            isInactiveOpacity: true,
-          ),
-          const SizedBox(height: 16),
-          const _UserCard(
-            name: 'Marc Leroy',
-            role: 'Enseignant',
-            roleColor: Color(0xFFB4FDB4),
-            roleTextColor: Color(0xFF1F632C),
-            avatarUrl: 'https://i.pravatar.cc/150?img=12',
-            isActive: true,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -404,7 +451,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.people_outline, color: Color(0xFF1C6D25), size: 28),
+                  const Icon(
+                    Icons.people_outline,
+                    color: Color(0xFF1C6D25),
+                    size: 28,
+                  ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
@@ -447,7 +498,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.school_outlined, color: Color(0xFF286C34), size: 28),
+                  const Icon(
+                    Icons.school_outlined,
+                    color: Color(0xFF286C34),
+                    size: 28,
+                  ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
@@ -481,6 +536,132 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       ),
     );
   }
+
+  Widget _buildClassesSection() {
+    final classService = ClassService();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Classes',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1C1C1C),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdminManageClassesScreen(),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Voir tout',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryButton,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<List<ClassModel>>(
+            stream: classService.getClassesStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final classes = snapshot.data ?? [];
+
+              if (classes.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Aucune classe créée',
+                      style: TextStyle(color: Color(0xFF999999), fontSize: 14),
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: classes.length > 3 ? 3 : classes.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final classData = classes[index];
+                  final colorHex = classData.color ?? '#7DF0FC';
+                  final color = Color(
+                    int.parse('0xFF${colorHex.substring(1)}'),
+                  );
+
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      border: Border.all(color: color.withValues(alpha: 0.3)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                classData.name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: color,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${classData.currentSize}/${classData.capacity} enfants',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: Colors.grey[400],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _UserCard extends StatelessWidget {
@@ -491,6 +672,8 @@ class _UserCard extends StatelessWidget {
   final String avatarUrl;
   final bool isActive;
   final bool isInactiveOpacity;
+  final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
   const _UserCard({
     required this.name,
@@ -500,6 +683,8 @@ class _UserCard extends StatelessWidget {
     required this.avatarUrl,
     required this.isActive,
     this.isInactiveOpacity = false,
+    required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -519,8 +704,8 @@ class _UserCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isInactiveOpacity 
-                    ? const Color(0xFFD6E6DB) 
+                color: isInactiveOpacity
+                    ? const Color(0xFFD6E6DB)
                     : const Color(0x4D91F78E), // rgba(145,247,142,0.3)
                 width: 2,
               ),
@@ -528,7 +713,7 @@ class _UserCard extends StatelessWidget {
                 image: NetworkImage(avatarUrl),
                 fit: BoxFit.cover,
                 // Grayscale if inactive
-                colorFilter: isInactiveOpacity 
+                colorFilter: isInactiveOpacity
                     ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
                     : null,
               ),
@@ -554,7 +739,10 @@ class _UserCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: roleColor,
                         borderRadius: BorderRadius.circular(24),
@@ -576,7 +764,9 @@ class _UserCard extends StatelessWidget {
                       height: 6,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isActive ? const Color(0xFF006F1D) : const Color(0x4D546259),
+                        color: isActive
+                            ? const Color(0xFF006F1D)
+                            : const Color(0x4D546259),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -586,7 +776,9 @@ class _UserCard extends StatelessWidget {
                         fontFamily: 'Inter',
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isActive ? const Color(0xFF546259) : const Color(0x99546259),
+                        color: isActive
+                            ? const Color(0xFF546259)
+                            : const Color(0x99546259),
                         height: 1.2,
                       ),
                     ),
@@ -596,24 +788,38 @@ class _UserCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFE5F1E7),
+          GestureDetector(
+            onTap: onEdit,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFFE5F1E7),
+              ),
+              child: const Icon(
+                Icons.edit_outlined,
+                color: Color(0xFF28352E),
+                size: 18,
+              ),
             ),
-            child: const Icon(Icons.edit_outlined, color: Color(0xFF28352E), size: 18),
           ),
           const SizedBox(width: 8),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFE5F1E7),
+          GestureDetector(
+            onTap: onDelete,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFFE5F1E7),
+              ),
+              child: const Icon(
+                Icons.delete_outline,
+                color: Color(0xFF28352E),
+                size: 18,
+              ),
             ),
-            child: const Icon(Icons.delete_outline, color: Color(0xFF28352E), size: 18),
           ),
         ],
       ),

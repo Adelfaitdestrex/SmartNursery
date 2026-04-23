@@ -1,0 +1,275 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =========================
+    // Helper functions
+    // =========================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function getNurseryId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nurseryId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() in ['admin', 'director'];
+    }
+    
+    function isEducator() {
+      return isAuthenticated() && getUserRole() in ['educator', 'admin', 'director'];
+    }
+    
+    function isParent() {
+      return isAuthenticated() && getUserRole() == 'parent';
+    }
+    
+    // ✅ Vérifie que l'utilisateur travaille pour cette crèche
+    function belongsToNursery(nurseryId) {
+      let userNurseryId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nurseryId;
+      return isAuthenticated() && userNurseryId == nurseryId;
+    }
+    
+    // =========================
+    // Users collection
+    // =========================
+    
+    match /users/{userId} {
+      
+      allow read: if isAuthenticated();
+      
+      // ✅ Un utilisateur peut créer son propre compte
+      allow create: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
+      
+      // ✅ Empêche un utilisateur de changer son rôle
+      allow update: if (
+        isOwner(userId) &&
+        request.resource.data.role == resource.data.role
+      ) || isAdmin();
+      
+      allow delete: if isAdmin();
+    }
+    
+    // =========================
+    // Children collection (collection "enfants" dans Firestore)
+    // =========================
+    
+    match /enfants/{childId} {
+      // Tout utilisateur authentifié peut lire
+      allow read: if isAuthenticated();
+      
+      // Création : admin/directeur OU éducateur
+      // OU : un parent qui crée un enfant dont son propre UID est dans parentIds
+      // (Firebase Auth bascule automatiquement sur le compte parent après createUserWithEmailAndPassword)
+      allow create: if isAdmin()
+                    || isEducator()
+                    || (isAuthenticated() && request.auth.uid in request.resource.data.parentIds);
+      
+      // Mise à jour : admin/directeur OU éducateur
+      // OU : un parent lié à cet enfant
+      allow update: if isAdmin()
+                    || isEducator()
+                    || (isAuthenticated() && request.auth.uid in resource.data.parentIds);
+      
+      // Suppression : admin/directeur uniquement
+      allow delete: if isAdmin();
+      
+      // Sous-collections : feedingLogs, sleepLogs, etc.
+      match /{subcollection}/{docId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin() || isEducator();
+      }
+    }
+    
+    // Ancienne règle conservée par rétrocompatibilité (collection "children")
+    match /children/{childId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin()
+                    || isEducator()
+                    || (isAuthenticated() && request.auth.uid in request.resource.data.parentIds);
+      allow update: if isAdmin()
+                    || isEducator()
+                    || (isAuthenticated() && request.auth.uid in resource.data.parentIds);
+      allow delete: if isAdmin();
+      
+      match /{subcollection}/{docId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin() || isEducator();
+      }
+    }
+    
+    // =========================
+    // Classes collection
+    // =========================
+    
+    match /classes/{classId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isEducator();
+      allow delete: if isAdmin();
+    }
+    
+    // =========================
+    // Posts collection
+    // =========================
+    
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      
+      allow update: if resource.data.authorId == request.auth.uid;
+      
+      allow delete: if isAdmin() || resource.data.authorId == request.auth.uid;
+      
+      // Comments
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        
+        allow update: if resource.data.authorId == request.auth.uid;
+        
+        allow delete: if isAdmin() ||
+          resource.data.authorId == request.auth.uid;
+      }
+      
+      // Likes
+      match /likes/{userId} {
+        allow read: if isAuthenticated();
+        allow create: if request.auth.uid == userId;
+        allow delete: if request.auth.uid == userId;
+      }
+    }
+    
+    // =========================
+    // Messages collection
+    // =========================
+
+    // Helper : l'utilisateur est participant à cette conversation
+    function isParticipant(conversationId) {
+      return request.auth.uid in get(
+        /databases/$(database)/documents/messages/$(conversationId)
+      ).data.participantIds;
+    }
+    
+    match /messages/{conversationId} {
+      
+      // ✅ list (getUserConversations) : Firestore évalue la rule sur chaque doc
+      //    → on vérifie que l'uid est dans participantIds du doc retourné
+      allow list: if isAuthenticated();
+      
+      // ✅ get : si le doc n'existe pas (resource == null) on autorise le check,
+      //    sinon on vérifie que l'user est participant
+      allow get: if isAuthenticated() &&
+        (resource == null || request.auth.uid in resource.data.participantIds);
+      
+      // ✅ Création : tout utilisateur authentifié peut démarrer une conversation
+      //    et doit s'inclure lui-même dans participantIds
+      allow create: if isAuthenticated() &&
+        request.auth.uid in request.resource.data.participantIds;
+      
+      // ✅ Mise à jour (lastMessage, updatedAt) : participant uniquement
+      allow update: if isAuthenticated() &&
+        request.auth.uid in resource.data.participantIds;
+      
+      // ── Sous-collection chatMessages ──────────────────────────────────────
+      match /chatMessages/{messageId} {
+        
+        // ✅ Lecture : participant à la conversation parente
+        allow read: if isAuthenticated() && isParticipant(conversationId);
+        
+        // ✅ Création : participant ET expéditeur = soi-même
+        allow create: if isAuthenticated() &&
+          isParticipant(conversationId) &&
+          request.resource.data.senderId == request.auth.uid;
+        
+        // ✅ Mise à jour : participant (pour markAsRead : isRead = true)
+        allow update: if isAuthenticated() && isParticipant(conversationId);
+      }
+    }
+    
+    // =========================
+    // Activities collection
+    // =========================
+    
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isEducator();
+      allow update: if isEducator();
+      allow delete: if isEducator() || isAdmin();
+    }
+    
+    // =========================
+    // Meals collection
+    // =========================
+    
+    match /meals/{mealId} {
+      allow read: if isAuthenticated();
+      allow create: if isEducator();
+      
+      // ⚠️ sécurisé → seulement éducateur ou admin
+      allow update: if isEducator();
+      
+      allow delete: if isEducator();
+    }
+    
+    // =========================
+    // Absences collection
+    // =========================
+    
+    match /absences/{absenceId} {
+      allow read: if isAuthenticated();
+      allow create: if isEducator();
+      allow update: if isEducator();
+      allow delete: if isEducator();
+    }
+    
+    // =========================
+    // Incidents collection
+    // =========================
+    
+    match /incidents/{incidentId} {
+      allow read: if isEducator();
+      allow create: if isEducator();
+      allow update: if isEducator();
+      allow delete: if isAdmin();
+    }
+    
+    // =========================
+    // Notifications collection
+    // =========================
+    
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      
+      allow create: if isAuthenticated();
+      
+      allow update: if resource.data.userId == request.auth.uid;
+      
+      allow delete: if resource.data.userId == request.auth.uid;
+    }
+    
+    
+    // =========================
+    // NurserySettings collection (Paramètres globaux de crèche)
+    // =========================
+    
+    match /nurserySettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

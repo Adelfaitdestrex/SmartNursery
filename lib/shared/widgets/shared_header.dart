@@ -25,11 +25,11 @@ class SharedHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 157,
+      height: 100, // Reduced height
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(25),
-          bottomRight: Radius.circular(25),
+          bottomLeft: Radius.circular(20), // Slightly smaller radius
+          bottomRight: Radius.circular(20),
         ),
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -37,11 +37,13 @@ class SharedHeader extends StatelessWidget {
           colors: [AppColors.headerTop, AppColors.headerBottom],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(22, 35, 22, 14),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10), // Adjusted padding to prevent overflow
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 61,
+            width: 80, // Expanded width for a larger clickable area
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -49,20 +51,27 @@ class SharedHeader extends StatelessWidget {
                   onTap: onLeftTap ??
                       () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const SettingsPage()),
+                            PageRouteBuilder(
+                              pageBuilder: (context, animation1, animation2) => const SettingsPage(),
+                              transitionDuration: Duration.zero,
+                              reverseTransitionDuration: Duration.zero,
+                            ),
                           ),
                   behavior: HitTestBehavior.opaque,
-                  child: leftWidget ??
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(width: 32, height: 2, color: Colors.white),
-                          const SizedBox(height: 7),
-                          Container(width: 32, height: 2, color: Colors.white),
-                          const SizedBox(height: 7),
-                          Container(width: 32, height: 2, color: Colors.white),
-                        ],
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+                    child: leftWidget ??
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(width: 32, height: 2, color: Colors.white),
+                            const SizedBox(height: 7),
+                            Container(width: 32, height: 2, color: Colors.white),
+                            const SizedBox(height: 7),
+                            Container(width: 32, height: 2, color: Colors.white),
+                          ],
+                        ),
+                  ),
                 ),
                 if (leftLabel != null) ...[
                   const SizedBox(height: 5),

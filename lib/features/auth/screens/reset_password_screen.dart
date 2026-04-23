@@ -37,8 +37,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        final otp = result['otp'] as String;
-
         // Email sent successfully, show confirmation dialog
         await showDialog(
           context: context,
@@ -62,8 +60,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         // Navigate to OTP verification
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) =>
-                OtpVerificationScreen(expectedOtp: otp, email: email),
+            builder: (_) => OtpVerificationScreen(email: email),
           ),
         );
       } else {

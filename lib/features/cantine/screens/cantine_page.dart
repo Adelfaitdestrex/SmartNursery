@@ -40,6 +40,14 @@ class _CantinePageState extends State<CantinePage> {
             
             const SizedBox(height: 16),
 
+            // Ajouter menu button
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: _NewMenuContainer(),
+            ),
+
+            const SizedBox(height: 16),
+
             // Filter row
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -159,6 +167,52 @@ class _CantinePageState extends State<CantinePage> {
                     ),
                   );
                 },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NewMenuContainer extends StatelessWidget {
+  const _NewMenuContainer();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Navigate to add menu page
+      },
+      child: Container(
+        height: 95,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 15),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: AppShadows.card,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 65,
+              height: 65,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDF8F5), // Fond léger
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: const Icon(Icons.restaurant_menu, size: 32, color: Color(0xFF156C4C)),
+            ),
+            const SizedBox(width: 35),
+            const Expanded(
+              child: Text(
+                'Ajouter un nouveau\nmenu...',
+                style: AppTextStyles.newPostText,
+                textAlign: TextAlign.center,
               ),
             ),
           ],

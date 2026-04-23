@@ -89,19 +89,35 @@ class FirebaseServices {
     }
   }
 
-  Future<void> saveUserData(
-    String uid,
-    String firstName,
-    String lastName,
-    String email,
-    String role,
-  ) async {
+  Future<void> saveUserData({
+    required String uid,
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String role,
+    String? phoneNumber,
+    String? profileImageUrl,
+    List<String>? childrenIds,
+    List<String>? classIds,
+  }) async {
     await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      'userId': uid,
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
       'role': role,
+      'nurseryId': '1', // ✅ Automatiquement assigné à la crèche 1
+      if (phoneNumber != null && phoneNumber.isNotEmpty)
+        'phoneNumber': phoneNumber,
+      if (profileImageUrl != null && profileImageUrl.isNotEmpty)
+        'profileImageUrl': profileImageUrl,
+      if (childrenIds != null && childrenIds.isNotEmpty)
+        'childrenIds': childrenIds,
+      if (classIds != null && classIds.isNotEmpty) 'classIds': classIds,
+      'settings': {},
+      'isActive': true,
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 

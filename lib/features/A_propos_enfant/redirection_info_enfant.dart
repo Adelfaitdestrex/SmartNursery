@@ -3,6 +3,7 @@ import 'package:smartnursery/features/A_propos_enfant/Abcence_calendrier.dart';
 import 'package:smartnursery/features/A_propos_enfant/gallery.dart';
 import 'package:smartnursery/features/A_propos_enfant/details_des_activit%C3%A9es.dart';
 import 'package:smartnursery/features/A_propos_enfant/Profil_medical.dart';
+import 'package:smartnursery/features/A_propos_enfant/journal.dart';
 
 // ---- Widget MenuButton réutilisable ----
 class MenuButton extends StatelessWidget {
@@ -137,8 +138,12 @@ class ChildInfoScreen extends StatelessWidget {
                       label: 'Alimentation',
                       color: const Color(0xFF3AAECC),
                       onTap: () {
-                        // Remplacez par la classe correcte de votre import
-                        // Navigator.push(context, MaterialPageRoute(builder: (context) => const AlimentationScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const FoodJournalPage(),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 20),
@@ -159,7 +164,7 @@ class ChildInfoScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const Detail(),
+                            builder: (context) => const ActivityDetailsPage(),
                           ),
                         );
                       },

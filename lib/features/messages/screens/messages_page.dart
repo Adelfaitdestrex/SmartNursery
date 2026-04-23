@@ -1,17 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
+import 'package:smartnursery/features/messages/services/message_service.dart';
+import 'widgets/index.dart';
 
-class MessagesPage extends StatelessWidget {
+class MessagesPage extends StatefulWidget {
   const MessagesPage({super.key});
 
   @override
+  State<MessagesPage> createState() => _MessagesPageState();
+}
+
+class _MessagesPageState extends State<MessagesPage> {
+  final TextEditingController _searchController = TextEditingController();
+  final MessageService _messageService = MessageService();
+  final _auth = FirebaseAuth.instance;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final currentUserId = _auth.currentUser?.uid ?? '';
+
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
-      bottomNavigationBar: const SafeArea(top: false, child: SharedBottomNavbar(currentIndex: 2)),
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: SharedBottomNavbar(currentIndex: 2),
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -19,7 +42,11 @@ class MessagesPage extends StatelessWidget {
             // Header
             SharedHeader(
               title: 'Messages',
-              leftWidget: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+              leftWidget: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+                size: 32,
+              ),
               leftLabel: null,
               onLeftTap: () {
                 Navigator.pushReplacement(
@@ -28,10 +55,8 @@ class MessagesPage extends StatelessWidget {
                 );
               },
             ),
-
             const SizedBox(height: 16),
-
-            // Search Bar
+            // Search Bar - Always visible
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Container(
@@ -39,217 +64,52 @@ class MessagesPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black, width: 1.0),
+                  border: Border.all(
+                    color: const Color(0xFFD6E6DB),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF28352E).withValues(alpha: 0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher un éducateur ou un parent ...',
-                    hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                    icon: Icon(Icons.search, color: Colors.grey),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: 'Rechercher un utilisateur...',
+                    hintStyle: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Color(0xFF9CAEA6),
+                      fontSize: 14,
+                    ),
+                    icon: Icon(Icons.search, color: Color(0xFF006F1D)),
                     border: InputBorder.none,
+                  ),
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Color(0xFF28352E),
                   ),
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-
-            // Recommended Educators
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: AppShadows.card,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Educateurs Recommandés',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildEducatorAvatar(
-                          initial: 'p',
-                          name: 'Mme petit',
-                          role: '(Educatrice)',
-                          innerColor: const Color(0xFF8DC63F),
-                          outerColor: const Color(0xFFC7E29F),
-                        ),
-                        _buildEducatorAvatar(
-                          initial: 'p',
-                          name: 'Laurent',
-                          role: '(Auxieliere)',
-                          innerColor: const Color(0xFFF9A826),
-                          outerColor: const Color(0xFFFCE1A5),
-                        ),
-                        _buildEducatorAvatar(
-                          initial: 'p',
-                          name: 'Mr Garcia',
-                          role: '(Directeur)',
-                          innerColor: const Color(0xFF6B87ED),
-                          outerColor: const Color(0xFFB1C4F9),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Recent Messages List
+            // Content - Search results or conversations
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                itemCount: 4, // Duplicating as per Figma design
-                itemBuilder: (context, index) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade300, width: 1.0),
+              child: _searchController.text.isNotEmpty
+                  ? SearchSection(searchController: _searchController)
+                  : ConversationsView(
+                      currentUserId: currentUserId,
+                      messageService: _messageService,
                     ),
-                    child: Row(
-                      children: [
-                        // Left Avatar
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF8DC63F),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'M',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Message Details
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: const [
-                                  Text(
-                                    'Mme Dupont',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  Text(
-                                    '10:45',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Bonjour , voici une photo ...',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildEducatorAvatar({
-    required String initial,
-    required String name,
-    required String role,
-    required Color innerColor,
-    required Color outerColor,
-  }) {
-    return Column(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: outerColor,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Container(
-              width: 55,
-              height: 55,
-              decoration: BoxDecoration(
-                color: innerColor,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black,
-          ),
-        ),
-        Text(
-          role,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black54,
-          ),
-        ),
-      ],
     );
   }
 }

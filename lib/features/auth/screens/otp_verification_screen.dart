@@ -6,12 +6,10 @@ import 'package:smartnursery/features/auth/screens/password_change_screen.dart';
 import 'package:smartnursery/features/auth/auth_service.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
-  final String expectedOtp;
   final String email;
 
   const OtpVerificationScreen({
     super.key,
-    required this.expectedOtp,
     required this.email,
   });
 
@@ -22,7 +20,6 @@ class OtpVerificationScreen extends StatefulWidget {
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   static const int _otpLength = 6;
 
-  late String _currentOtp;
   bool _isResending = false;
   int _resendCountdown = 0;
   bool _canResend = true;
@@ -39,7 +36,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   void initState() {
     super.initState();
-    _currentOtp = widget.expectedOtp;
   }
 
   @override
@@ -64,27 +60,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void _onConfirm() {
     final otp = _controllers.map((c) => c.text).join();
     if (otp.length == _otpLength) {
-      if (AuthService.verifyOtp(otp, _currentOtp)) {
-        // OTP is correct, navigate to password change screen
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => PasswordChangeScreen(email: widget.email),
-          ),
-        );
-      } else {
-        // OTP is incorrect
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Code de vérification incorrect'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        // Clear the OTP fields for retry
-        for (final controller in _controllers) {
-          controller.clear();
-        }
-        _focusNodes[0].requestFocus();
-      }
+      // Navigate to password change screen with OTP
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PasswordChangeScreen(email: widget.email, otp: otp),
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -118,7 +99,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        _currentOtp = result['otp'] as String;
 
         // Effacer les champs OTP
         for (final controller in _controllers) {

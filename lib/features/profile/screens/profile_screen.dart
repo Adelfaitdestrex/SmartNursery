@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smartnursery/features/settings/screens/settings_page.dart';
 import 'package:smartnursery/features/admin/screens/admin_redirection_screen.dart';
 import 'package:smartnursery/features/auth/screens/login_screen.dart';
 import 'package:smartnursery/features/A_propos_enfant/redirection_info_enfant.dart';
+import 'package:smartnursery/features/reconnaissancefaciale/recherche.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -218,6 +220,8 @@ class _MainProfileCard extends StatelessWidget {
               iconData: Icons.mail_outline,
             ),
             const SizedBox(height: 24),
+            _FaceRecognitionAccessButton(userId: FirebaseAuth.instance.currentUser?.uid),
+            const SizedBox(height: 12),
             _CustomButton(
               text: 'Admin Mode',
               backgroundColor: const Color(0xFFB20000),
@@ -249,6 +253,48 @@ class _MainProfileCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _FaceRecognitionAccessButton extends StatelessWidget {
+  final String? userId;
+
+  const _FaceRecognitionAccessButton({required this.userId});
+
+  @override
+  Widget build(BuildContext context) {
+    if (userId == null) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data?.data() == null) {
+          return const SizedBox.shrink();
+        }
+
+        final role = snapshot.data!.data()!['role']?.toString().toLowerCase();
+        final canAccess = role == 'admin' || role == 'educateur';
+
+        if (!canAccess) {
+          return const SizedBox.shrink();
+        }
+
+        return _CustomButton(
+          text: 'Reconnaissance Faciale',
+          backgroundColor: const Color(0xFF88C043),
+          textColor: Colors.white,
+          borderColor: const Color(0xFF88C043),
+          iconData: Icons.face_retouching_natural,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RechercheFacePage()),
+            );
+          },
+        );
+      },
     );
   }
 }

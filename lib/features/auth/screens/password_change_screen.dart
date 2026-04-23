@@ -7,8 +7,13 @@ import 'package:smartnursery/features/auth/auth_service.dart';
 
 class PasswordChangeScreen extends StatefulWidget {
   final String email;
+  final String otp;
 
-  const PasswordChangeScreen({super.key, required this.email});
+  const PasswordChangeScreen({
+    super.key,
+    required this.email,
+    required this.otp,
+  });
 
   @override
   State<PasswordChangeScreen> createState() => _PasswordChangeScreenState();
@@ -33,6 +38,7 @@ class _PasswordChangeScreenState extends State<PasswordChangeScreen> {
 
       final result = await AuthService.changePasswordWithOtp(
         email: widget.email,
+        otp: widget.otp,
         newPassword: _passwordController.text,
       );
 

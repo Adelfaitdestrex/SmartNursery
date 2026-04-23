@@ -1,77 +1,66 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:smartnursery/services/email_service.dart';
-import 'dart:math';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Génère un code OTP à 6 chiffres
-  static String generateOtp() {
-    final random = Random();
-    return (100000 + random.nextInt(900000)).toString();
-  }
+  static const String _requestResetCodeEndpoint =
+      'https://us-central1-smart-nursery-7a6f6.cloudfunctions.net/requestPasswordResetCode';
+  static const String _resetPasswordEndpoint =
+      'https://us-central1-smart-nursery-7a6f6.cloudfunctions.net/resetPasswordWithCode';
 
-  /// Envoie un code OTP à l'adresse email fournie
-  /// Retourne true si l'email a été envoyé avec succès, false sinon
+  /// Demande l'envoi d'un code de réinitialisation de mot de passe à l'email fourni
   static Future<Map<String, dynamic>> requestPasswordReset(String email) async {
     try {
-      // Valider l'email
       if (email.isEmpty || !email.contains('@')) {
         return {
           'success': false,
           'message': 'Veuillez entrer une adresse email valide',
-          'otp': null,
         };
       }
 
-      // Générer l'OTP
-      final otp = generateOtp();
+      final response = await http.post(
+        Uri.parse(_requestResetCodeEndpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
 
-      // Envoyer l'OTP via email
-      final emailSent = await EmailService.sendOtpEmail(email: email, otp: otp);
+      final data = jsonDecode(response.body);
 
-      if (emailSent) {
+      if (response.statusCode == 200 && data['success'] == true) {
         if (kDebugMode) {
-          debugPrint('OTP sent to $email: $otp');
+          debugPrint('Reset code sent to $email');
         }
         return {
           'success': true,
-          'message': 'Code de vérification envoyé à $email',
-          'otp': otp,
+          'message': data['message'] ?? 'Code de vérification envoyé à $email',
         };
       } else {
         return {
           'success': false,
-          'message': 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.',
-          'otp': null,
+          'message': data['message'] ?? 'Erreur lors de l\'envoi de l\'email.',
         };
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Password reset error: $e');
+        debugPrint('Password reset request error: $e');
       }
       return {
         'success': false,
         'message': 'Une erreur s\'est produite. Veuillez réessayer.',
-        'otp': null,
       };
     }
   }
 
-  /// Vérifie que le code OTP fourni correspond au code attendu
-  static bool verifyOtp(String providedOtp, String expectedOtp) {
-    return providedOtp == expectedOtp;
-  }
-
-  /// Change le mot de passe pour un utilisateur via OTP
-  /// Cela est utilisé lors d'une réinitialisation de mot de passe
+  /// Change le mot de passe pour un utilisateur via OTP et la Cloud Function
   static Future<Map<String, dynamic>> changePasswordWithOtp({
     required String email,
+    required String otp,
     required String newPassword,
   }) async {
     try {
-      // Valider le mot de passe
       if (newPassword.isEmpty || newPassword.length < 6) {
         return {
           'success': false,
@@ -79,29 +68,33 @@ class AuthService {
         };
       }
 
-      // Récupérer l'utilisateur actuellement connecté
-      final currentUser = _auth.currentUser;
+      final response = await http.post(
+        Uri.parse(_resetPasswordEndpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      );
 
-      if (currentUser != null && currentUser.email == email) {
-        // L'utilisateur est connecté, mettre à jour directement
-        await currentUser.updatePassword(newPassword);
-        return {'success': true, 'message': 'Mot de passe changé avec succès'};
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {'success': true, 'message': data['message'] ?? 'Mot de passe changé avec succès'};
       } else {
-        // L'utilisateur n'est pas connecté
-        // Dans une application réelle, vous utiliseriez un lien de réinitialisation
-        // Pour ce flow de réinitialisation via OTP, on simule le changement
-        if (kDebugMode) {
-          debugPrint('Password would be changed for: $email');
-        }
-        return {'success': true, 'message': 'Mot de passe changé avec succès'};
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Code invalide ou expiré',
+        };
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Password change error: $e');
+        debugPrint('Password change with OTP error: $e');
       }
       return {
         'success': false,
-        'message': 'Erreur lors du changement de mot de passe: ${e.toString()}',
+        'message': 'Erreur lors du changement de mot de passe',
       };
     }
   }

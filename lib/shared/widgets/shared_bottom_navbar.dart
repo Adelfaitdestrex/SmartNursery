@@ -55,17 +55,14 @@ class SharedBottomNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 95,
+      height: 80, // Slightly reduced to fit better when glued to bottom
       decoration: BoxDecoration(
         color: AppColors.bottomNavBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.bottomNavBorder),
+        border: Border(top: BorderSide(color: AppColors.bottomNavBorder)), // Only top border
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
             _NavItem(
               label: 'Flux', 
               iconPath: _iconFlux, 
@@ -98,8 +95,7 @@ class SharedBottomNavbar extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -118,29 +114,31 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 90,
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
-              width: 50,
-              height: 50,
+              width: 35,
+              height: 35,
               child: Image.asset(
                 iconPath,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.white), // Fallback if asset is missing
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               label,
               style: AppTextStyles.navLabel.copyWith(
                 color: active ? AppColors.activeNavText : Colors.white,
+                fontSize: 16, // Augmentation de la taille de 6
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

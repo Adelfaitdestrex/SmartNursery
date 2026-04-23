@@ -72,7 +72,7 @@ class FeedHeader extends StatelessWidget {
           ),
           const Expanded(
             child: Text(
-              'Flux d\'actualité',
+              'Flux',
               textAlign: TextAlign.center,
               style: AppTextStyles.headerTitle,
             ),

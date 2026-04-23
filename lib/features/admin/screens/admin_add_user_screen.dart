@@ -1,7 +1,12 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
-import 'package:smartnursery/services/firebase/firebase_services.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:smartnursery/features/admin/screens/add_children_flow_page.dart';
 
 class AdminAddUserScreen extends StatefulWidget {
   const AdminAddUserScreen({super.key});
@@ -11,23 +16,36 @@ class AdminAddUserScreen extends StatefulWidget {
 }
 
 class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final FirebaseServices _firebaseServices = FirebaseServices();
+  String? _profileImageUrl;
+  File? _image;
+  final ImagePicker _picker = ImagePicker();
+  bool _isActive = true;
   bool _isLoading = false;
   bool _emailManuallyEdited = false;
 
+  final TextEditingController _enfantController = TextEditingController();
+  final TextEditingController _classeController = TextEditingController();
+  final TextEditingController _numberOfChildrenController =
+      TextEditingController();
+
   int _selectedRoleIndex = 0;
-  final List<String> _roles = ['Parent', 'Enseignant', 'Administrateur'];
+  final List<String> _roles = [
+    'Parent',
+    'Enseignant',
+    'Administrateur',
+    'Directeur',
+  ];
+  final List<String> _roleValues = ['parent', 'educator', 'admin', 'director'];
 
   @override
   void initState() {
     super.initState();
     _generatePassword();
-    _firstNameController.addListener(_onNameChanged);
-    _lastNameController.addListener(_onNameChanged);
+    _nameController.addListener(_onNameChanged);
     _emailController.addListener(() {
       // Detect if user manually typed in the email field
       final autoEmail = _buildAutoEmail();
@@ -39,7 +57,6 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
 
   void _onNameChanged() {
     setState(() {
-      // Only auto-update email if user hasn't manually edited it
       if (!_emailManuallyEdited) {
         _emailController.text = _buildAutoEmail();
         _emailController.selection = TextSelection.fromPosition(
@@ -51,10 +68,13 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _nameController.dispose();
+    _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _enfantController.dispose();
+    _classeController.dispose();
+    _numberOfChildrenController.dispose();
     super.dispose();
   }
 
@@ -63,10 +83,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
         'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#*';
     final rnd = Random.secure();
     final newPassword = String.fromCharCodes(
-      Iterable.generate(
-        10,
-        (_) => chars.codeUnitAt(rnd.nextInt(chars.length)),
-      ),
+      Iterable.generate(10, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
     );
     setState(() {
       _passwordController.text = newPassword;
@@ -95,12 +112,9 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
   }
 
   String _buildAutoEmail() {
-    final first = _cleanString(_firstNameController.text);
-    final last = _cleanString(_lastNameController.text);
-    if (first.isEmpty && last.isEmpty) return '';
-    if (first.isEmpty) return '$last@ecole-everbloom.fr';
-    if (last.isEmpty) return '$first@ecole-everbloom.fr';
-    return '$first.$last@ecole-everbloom.fr';
+    final name = _cleanString(_nameController.text);
+    if (name.isEmpty) return '';
+    return '$name@ecole-everbloom.fr';
   }
 
   @override
@@ -123,7 +137,9 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
                     _buildFormSection(),
                     const SizedBox(height: 24),
                     _buildRoleSelection(),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
+                    _buildDynamicFields(),
+                    const SizedBox(height: 24),
                     _buildCredentialsSection(),
                     const SizedBox(height: 40),
                     _buildSubmitButton(),
@@ -219,17 +235,30 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
             ),
             const SizedBox(height: 24),
             _buildTextField(
-              label: 'Prénom',
-              controller: _firstNameController,
-              hint: 'Ex: Marie',
+              label: 'Nom complet',
+              controller: _nameController,
+              hint: 'Ex: Marie Lefebvre',
               icon: Icons.person_outline,
             ),
             const SizedBox(height: 16),
+            const SizedBox(height: 16),
+            _buildImagePicker(),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Actif'),
+              value: _isActive,
+              onChanged: (value) {
+                setState(() {
+                  _isActive = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
             _buildTextField(
-              label: 'Nom de famille',
-              controller: _lastNameController,
-              hint: 'Ex: Lefebvre',
-              icon: Icons.badge_outlined,
+              label: 'Numéro de téléphone (optionnel)',
+              controller: _phoneController,
+              hint: 'Ex: 06 12 34 56 78',
+              icon: Icons.phone_outlined,
             ),
           ],
         ),
@@ -242,6 +271,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
     required TextEditingController controller,
     required String hint,
     required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,6 +301,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
               Expanded(
                 child: TextField(
                   controller: controller,
+                  keyboardType: keyboardType,
                   decoration: InputDecoration(
                     hintText: hint,
                     hintStyle: const TextStyle(
@@ -359,6 +390,39 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildDynamicFields() {
+    if (_selectedRoleIndex == 0) {
+      // Parent
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTextField(
+              label: 'Nombre d\'enfants à ajouter',
+              controller: _numberOfChildrenController,
+              hint: 'Ex: 2',
+              icon: Icons.child_care,
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+      );
+    } else if (_selectedRoleIndex == 1) {
+      // Enseignant
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: _buildTextField(
+          label: 'Attribuer une classe à l\'éducateur',
+          controller: _classeController,
+          hint: 'Sélectionner la classe',
+          icon: Icons.class_outlined,
+        ),
+      );
+    }
+    return const SizedBox.shrink(); // Admin
   }
 
   Widget _buildCredentialsSection() {
@@ -533,105 +597,180 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
     );
   }
 
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
 
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadImage(File image, String userId) async {
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images')
+          .child('$userId.jpg');
+      await storageRef.putFile(image);
+      final downloadUrl = await storageRef.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      return null;
+    }
+  }
 
   Future<void> _handleCreateUser() async {
-    final firstName = _firstNameController.text.trim();
-    final lastName = _lastNameController.text.trim();
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final phone = _phoneController.text.trim();
+    final role = _roleValues[_selectedRoleIndex];
 
-    if (firstName.isEmpty || lastName.isEmpty) {
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Le prénom et le nom sont obligatoires.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Le nom est obligatoire.'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
       );
       return;
     }
-
     if (email.isEmpty || !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez entrer une adresse e-mail valide.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Veuillez entrer une adresse e-mail valide.'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Le mot de passe doit contenir au moins 6 caractères.'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
       );
       return;
     }
 
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Le mot de passe doit contenir au moins 6 caractères.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
+    int? numberOfChildren;
+    if (role == 'parent') {
+      numberOfChildren = int.tryParse(_numberOfChildrenController.text.trim());
+      if (numberOfChildren == null || numberOfChildren <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Veuillez entrer un nombre d'enfants valide."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
 
-    final result = await _firebaseServices.createAccountOnSecondaryApp(
-      email,
-      password,
-    );
-
-    setState(() => _isLoading = false);
-
-    if (!mounted) return;
-
-    if (result == null || result.contains(' ') || result.contains('Error') || result.contains('erreur')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result ?? 'Erreur inconnue'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    // result is uid
-    final uid = result;
     try {
-      await _firebaseServices.saveUserData(
-        uid,
-        firstName,
-        lastName,
-        email,
-        _roles[_selectedRoleIndex],
-      );
-    } catch (e) {
+      // ── Étape 1 : Cloud Function createUser (Admin SDK — pas de basculement de session) ──
+      debugPrint('☁️ Calling createUser Cloud Function for $email ($role)...');
+      final callable = FirebaseFunctions.instance.httpsCallable('createUser');
+      final result = await callable.call({
+        'email': email,
+        'password': password,
+        'name': name,
+        'phone': phone.isNotEmpty ? phone : null,
+        'role': role,
+        'isActive': _isActive,
+        'nurseryId': '1',
+      });
+
+      final newUid = result.data['uid'] as String;
+      debugPrint('✅ Cloud Function success — uid: $newUid');
+
+      // ── Étape 2 : upload photo de profil (admin toujours connecté) ──────────
+      if (_image != null) {
+        _profileImageUrl = await _uploadImage(_image!, newUid);
+        if (_profileImageUrl != null) {
+          await FirebaseFirestore.instance.collection('users').doc(newUid).update({
+            'profileImageUrl': _profileImageUrl,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Compte créé, mais erreur lors de la sauvegarde des données.',
-          ),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text('Utilisateur créé : $email'), backgroundColor: const Color(0xFF006F1D), behavior: SnackBarBehavior.floating),
       );
-      Navigator.pop(context);
-      return;
+
+      // ── Étape 3 : navigation ─────────────────────────────────────────────────
+      if (role == 'parent' && numberOfChildren != null) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => AddChildrenFlowPage(
+              parentId: newUid,
+              numberOfChildren: numberOfChildren!,
+              nurseryId: '1',
+            ),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        Navigator.pop(context);
+      }
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('❌ Cloud Function error: [${e.code}] ${e.message}');
+      if (!mounted) return;
+      String message = e.message ?? 'Erreur lors de la création';
+      if (e.code == 'already-exists') {
+        message = 'Cet email est déjà utilisé.';
+      } else if (e.code == 'permission-denied') {
+        message = "Vous n'avez pas les droits nécessaires.";
+      } else if (e.code == 'unauthenticated') {
+        message = 'Session expirée. Veuillez vous reconnecter.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      debugPrint('❌ Unexpected error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : ${e.toString()}'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
+  }
 
-    if (!mounted) return;
+  Widget _buildImagePicker() {
+    return Column(
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Utilisateur créé : $email'),
-        backgroundColor: const Color(0xFF006F1D),
-        behavior: SnackBarBehavior.floating,
-      ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Image de profil',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF546259),
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            height: 150,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4FBF4),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFD6E6DB)),
+            ),
+            child: _image != null
+                ? Image.file(_image!, fit: BoxFit.cover)
+                : const Icon(
+                    Icons.add_a_photo,
+                    color: Color(0x66546259),
+                    size: 50,
+                  ),
+          ),
+        ),
+      ],
     );
-
-    Navigator.pop(context);
   }
 
   Widget _buildSubmitButton() {

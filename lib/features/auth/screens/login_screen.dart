@@ -209,25 +209,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
               ),
 
-              const SizedBox(height: 30),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(
-                      Icons.facebook,
-                      color: Colors.blue,
-                      size: 40,
-                    ),
-                  ),
-                ],
-              ),
+            
+            
 
               const SizedBox(height: 40),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const Text('Vous n\'avez pas de compte ? '),
                   GestureDetector(
                     onTap: () {
                       Navigator.of(context).push(
@@ -237,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                     child: const Text(
-                      'Vous n\'avez pas de compte ?',
+                      'S\'inscrire',
                       style: TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.bold,

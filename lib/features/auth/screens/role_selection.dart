@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/features/auth/screens/login_screen.dart';
 
+
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({Key? key}) : super(key: key);
 
@@ -10,7 +11,7 @@ class RoleSelectionScreen extends StatelessWidget {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -43,7 +44,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                // Image des enfants dans le cercle
+                // Logo SmartNursery
                 Container(
                   width: 130,
                   height: 130,
@@ -53,7 +54,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      'assets/images/kids.png',
+                      'assets/images/logosmartnursey.png',
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -80,7 +81,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 RoleButton(
                   label: 'je suis un parent',
                   color: const Color(0xFF4FC3F7),
-                  imagePath: 'assets/images/parent.png',
+                  imagePath: 'assets/images/parent_role.png',
                   onTap: () {
                       Navigator.pushReplacement(
                         context,
@@ -95,7 +96,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 RoleButton(
                   label: 'je suis un.e\nenseignant.e',
                   color: const Color(0xFFF5A623),
-                  imagePath: 'assets/images/teacher.png',
+                  imagePath: 'assets/images/educateur_role.png',
                   onTap: () {
                       Navigator.pushReplacement(
                         context,
@@ -110,7 +111,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 RoleButton(
                   label: 'je suis un membre\nde la direction',
                   color: const Color(0xFF5DBE4A),
-                  imagePath: 'assets/images/director.png',
+                  imagePath: 'assets/images/directeur-Role.png',
                   onTap: () {
                       Navigator.pushReplacement(
                         context,
@@ -169,9 +170,10 @@ class RoleButton extends StatelessWidget {
             Container(
               width: 75,
               height: 75,
+              padding: const EdgeInsets.all(2), // Petit espacement pour le bord
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(40),
+                shape: BoxShape.circle,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(40),

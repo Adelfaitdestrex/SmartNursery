@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:smartnursery/features/auth/screens/login_screen.dart';
+import 'package:smartnursery/features/auth/screens/role_selection.dart';
 
 class SmartNurseryWelcomePage extends StatefulWidget {
-  const SmartNurseryWelcomePage({super.key});
+  const SmartNurseryWelcomePage({super.key });
 
   @override
   State<SmartNurseryWelcomePage> createState() =>
@@ -14,13 +14,13 @@ class _SmartNurseryWelcomePageState extends State<SmartNurseryWelcomePage> {
   @override
   void initState() {
     super.initState();
-    // Redirection automatique vers le Login Screen après 3 secondes
+    // Redirection automatique vers Role Selection après 5 secondes
     Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const LoginScreen(autoRedirect: false),
+          builder: (context) => const RoleSelectionScreen(),
         ),
       );
     });

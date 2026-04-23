@@ -61,6 +61,13 @@ SETUP_EMAIL.js
 # Firebase Cloud Functions node_modules
 functions/node_modules/
 
+# Admin Service Account keys
+*service_account*.json
+*service-account*.json
+temp_service_account.json
+firebase_export.json
+list_collections.js
+
 # IDE files with sensitive info
 .vscode/settings.json
 

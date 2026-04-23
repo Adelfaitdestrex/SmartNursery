@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
-import 'package:smartnursery/shared/widgets/shared_header.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
-
-
-
 import 'package:smartnursery/features/classes/screens/instance_classe.dart';
+import 'package:smartnursery/shared/widgets/shared_header.dart';
 
 class ClassesPage extends StatelessWidget {
   const ClassesPage({super.key});
@@ -14,8 +10,13 @@ class ClassesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.pageBackground,
-      bottomNavigationBar: const SafeArea(top: false, child: SharedBottomNavbar(currentIndex: 4)),
+      backgroundColor: const Color(
+        0xFFF9F9F9,
+      ), // Fond clair d'après la maquette
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: SharedBottomNavbar(currentIndex: 4),
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -23,7 +24,11 @@ class ClassesPage extends StatelessWidget {
             // Header
             SharedHeader(
               title: 'Classes',
-              leftWidget: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+              leftWidget: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+                size: 32,
+              ),
               leftLabel: null,
               onLeftTap: () {
                 Navigator.pushReplacement(
@@ -36,82 +41,92 @@ class ClassesPage extends StatelessWidget {
             // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.only(top: 24, bottom: 40),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 child: Column(
                   children: [
-                    // Card 1 (Little Angels - Teal)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 20),
-                        child: _ClassCard(
-                          title: 'Little Angels',
-                          ageGroup: '5 mois-2 ans',
-                          backgroundColor: AppColors.activityCardTeal,
-                          titleColor: const Color(0xFF0F5A4D),
-                          buttonColor: const Color(0xFF48C9B0),
-                          imagePath: 'assets/icons/enfant_classe1.png',
-                          imageWidth: 60,
-                          imageHeight: 60,
-                          topOffset: -20,
-                          leftOffset: -20,
-                          // NOUVEAU : Ajout de la navigation ici
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SmartNurseryClassPage(), // Votre page cible
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                    // Card 1 (Little Angels - Teal/Light Blue)
+                    _ClassCard(
+                      title: 'Little Angels',
+                      ageGroup: '5 mois - 2 ans',
+                      backgroundColor: const Color(0xFF7DF0FC), // Cyan clair
+                      titleColor: const Color(0xFF0F5A4D),
+                      subtitleColor: const Color(
+                        0xFF0F5A4D,
+                      ).withValues(alpha: 0.8),
+                      imagePath: 'assets/icons/enfant_classe1.png',
+                      classId: 'class_little_angels',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SmartNurseryClassPage(
+                              classId: 'class_little_angels',
+                              className: 'Little Angels',
+                              classColor: Color(0xFF8BC34A),
+                              classBgColor: Color(0xFFD7E8B8),
+                            ),
+                          ),
+                        );
+                      },
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 24),
 
                     // Card 2 (Young Explorers - Yellow)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 20),
-                        child: _ClassCard(
-                          title: 'Young Explorers',
-                          ageGroup: '2 - 4 ans',
-                          backgroundColor: AppColors.activityCardYellow,
-                          titleColor: const Color(0xFF6B5A00),
-                          buttonColor: const Color(0xFFFFD54F),
-                          imagePath: 'assets/icons/enfant-classe2.png',
-                          imageWidth: 65,
-                          imageHeight: 65,
-                          topOffset: -20,
-                          leftOffset: -10,
-                          // Pas de onTap ici pour l'instant
-                        ),
-                      ),
+                    _ClassCard(
+                      title: 'Young\nExplorers',
+                      ageGroup: '2 - 4 ans',
+                      backgroundColor: const Color(0xFFFEE34F), // Jaune soleil
+                      titleColor: const Color(0xFF6B5A00),
+                      subtitleColor: const Color(
+                        0xFF6B5A00,
+                      ).withValues(alpha: 0.8),
+                      imagePath: 'assets/icons/enfant-classe2.png',
+                      classId: 'class_young_explorers',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SmartNurseryClassPage(
+                              classId: 'class_young_explorers',
+                              className: 'Young Explorers',
+                              classColor: Color(0xFFC8A800),
+                              classBgColor: Color(0xFFFFF8D0),
+                            ),
+                          ),
+                        );
+                      },
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 24),
 
-                    // Card 3 (Future Stars - Red)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 20),
-                        child: _ClassCard(
-                          title: 'Future Stars',
-                          ageGroup: '4 - 6 ans',
-                          backgroundColor: AppColors.activityCardRed,
-                          titleColor: const Color(0xFF7A1D1D),
-                          buttonColor: const Color(0xFFFF7B7B),
-                          imagePath: 'assets/icons/jeux-classe3.png',
-                          imageWidth: 50,
-                          imageHeight: 50,
-                          topOffset: -15,
-                          leftOffset: -15,
-                          // Pas de onTap ici pour l'instant
-                        ),
-                      ),
+                    // Card 3 (Future Stars - Red/Pink)
+                    _ClassCard(
+                      title: 'Future Stars',
+                      ageGroup: '4 - 6 ans',
+                      backgroundColor: const Color(0xFFFF8B9E), // Rose pastel
+                      titleColor: const Color(0xFF7A1D1D),
+                      subtitleColor: const Color(
+                        0xFF7A1D1D,
+                      ).withValues(alpha: 0.8),
+                      imagePath: 'assets/icons/jeux-classe3.png',
+                      classId: 'class_future_stars',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SmartNurseryClassPage(
+                              classId: 'class_future_stars',
+                              className: 'Future Stars',
+                              classColor: Color(0xFFD04060),
+                              classBgColor: Color(0xFFFFE0E8),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -124,127 +139,148 @@ class ClassesPage extends StatelessWidget {
   }
 }
 
+
 class _ClassCard extends StatelessWidget {
   final String title;
   final String ageGroup;
   final Color backgroundColor;
   final Color titleColor;
-  final Color buttonColor;
+  final Color subtitleColor;
   final String imagePath;
-  final double imageWidth;
-  final double imageHeight;
-  final double topOffset;
-  final double leftOffset;
-  final VoidCallback? onTap; // NOUVEAU : Déclaration de la variable onTap
+  final String classId;
+  final VoidCallback? onTap;
 
   const _ClassCard({
     required this.title,
     required this.ageGroup,
     required this.backgroundColor,
     required this.titleColor,
-    required this.buttonColor,
+    required this.subtitleColor,
     required this.imagePath,
-    required this.imageWidth,
-    required this.imageHeight,
-    required this.topOffset,
-    required this.leftOffset,
-    this.onTap, // NOUVEAU : Initialisation dans le constructeur
+    required this.classId,
+    this.onTap,
   });
+
 
   @override
   Widget build(BuildContext context) {
-    // NOUVEAU : On englobe toute la carte dans un GestureDetector
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Main Card Container
-          Container(
-            width: 260,
-            margin: const EdgeInsets.only(top: 15, left: 15),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
-                ),
-              ],
-              border: Border.all(color: Colors.black12, width: 1.0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              offset: const Offset(0, 8),
+              blurRadius: 16,
+              spreadRadius: -4,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: titleColor,
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Left Column: Text & Button
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: titleColor,
+                      height: 1.2,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  ageGroup,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  const SizedBox(height: 6),
+                  Text(
+                    ageGroup,
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: subtitleColor,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                // Button "Entrer"
-                Container(
-                  width: 140,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: buttonColor,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 4,
-                        offset: Offset(0, 3),
+                  const SizedBox(height: 24),
+                  // White Capsule Button "Entrer"
+                  UnconstrainedBox(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Entrer',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                      decoration: BoxDecoration(
                         color: Colors.white,
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            offset: const Offset(0, 4),
+                            blurRadius: 12,
+                            spreadRadius: -2,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Entrer',
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: titleColor,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Floating Image
-          Positioned(
-            top: topOffset,
-            left: leftOffset,
-            child: Image.asset(
-              imagePath,
-              width: imageWidth,
-              height: imageHeight,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.image_not_supported,
-                size: 40,
-                color: Colors.black45,
+                ],
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(width: 16),
+
+            // Right Column: Image with circular backdrop overlay
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.5),
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    spreadRadius: 2,
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Image.asset(
+                    imagePath,
+                    width: 70,
+                    height: 70,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.image_not_supported,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
