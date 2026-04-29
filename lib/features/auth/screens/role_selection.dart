@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/features/auth/screens/login_screen.dart';
 
-
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({Key? key}) : super(key: key);
 
@@ -24,25 +23,6 @@ class RoleSelectionScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 10),
-                // Bouton de retour
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    borderRadius: BorderRadius.circular(30),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 10),
                 // Logo SmartNursery
                 Container(
@@ -83,27 +63,33 @@ class RoleSelectionScreen extends StatelessWidget {
                   color: const Color(0xFF4FC3F7),
                   imagePath: 'assets/images/parent_role.png',
                   onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(autoRedirect: false),
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(
+                          autoRedirect: false,
+                          expectedRole: 'parent',
                         ),
-                      );
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 20),
                 // Bouton je suis un.e enseignant.e
                 RoleButton(
-                  label: 'je suis un.e\nenseignant.e',
+                  label: 'je suis un(e)\nenseignant(e)',
                   color: const Color(0xFFF5A623),
                   imagePath: 'assets/images/educateur_role.png',
                   onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(autoRedirect: false),
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(
+                          autoRedirect: false,
+                          expectedRole: 'educator',
                         ),
-                      );
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 20),
@@ -113,12 +99,15 @@ class RoleSelectionScreen extends StatelessWidget {
                   color: const Color(0xFF5DBE4A),
                   imagePath: 'assets/images/directeur-Role.png',
                   onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(autoRedirect: false),
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(
+                          autoRedirect: false,
+                          expectedRole: 'admin',
                         ),
-                      );
+                      ),
+                    );
                   },
                 ),
               ],

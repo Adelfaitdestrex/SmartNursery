@@ -2,13 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:smartnursery/features/messages/screens/chat.dart';
 import 'package:smartnursery/features/messages/services/message_service.dart';
- 
+
 class UsersListSection extends StatelessWidget {
   final String currentUserId;
   final MessageService messageService;
   final Map<String, Timestamp?> lastActivityByUser;
   final Map<String, int> unreadByUser;
- 
+
   const UsersListSection({
     super.key,
     required this.currentUserId,
@@ -16,7 +16,7 @@ class UsersListSection extends StatelessWidget {
     required this.lastActivityByUser,
     required this.unreadByUser,
   });
- 
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
@@ -30,13 +30,23 @@ class UsersListSection extends StatelessWidget {
             ),
           );
         }
- 
+
+        if (usersSnapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              'Erreur chargement utilisateurs: ${usersSnapshot.error}',
+              style: TextStyle(color: Colors.grey[700], fontSize: 13),
+            ),
+          );
+        }
+
         final docs =
             usersSnapshot.data?.docs
                 .where((d) => d.id != currentUserId)
                 .toList() ??
             [];
- 
+
         if (docs.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -46,10 +56,10 @@ class UsersListSection extends StatelessWidget {
             ),
           );
         }
- 
+
         // CORRECTION : Trier IMMÉDIATEMENT avant de construire les widgets
         final sortedDocs = _sortUsers(docs);
- 
+
         return Column(
           children: sortedDocs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
@@ -58,9 +68,9 @@ class UsersListSection extends StatelessWidget {
             final photoUrl = data['profileImageUrl'] as String? ?? '';
             final role = data['role'] as String? ?? '';
             final unreadCount = unreadByUser[doc.id] ?? 0;
- 
+
             final (roleColor, roleLabel) = _getRoleInfo(role);
- 
+
             return _buildUserCard(
               context: context,
               userId: doc.id,
@@ -76,20 +86,20 @@ class UsersListSection extends StatelessWidget {
       },
     );
   }
- 
+
   List<QueryDocumentSnapshot> _sortUsers(List<QueryDocumentSnapshot> docs) {
     final sortedDocs = List<QueryDocumentSnapshot>.from(docs);
-    
+
     // Créer un index pour maintenir l'ordre original en cas d'égalité
     final indexById = <String, int>{
       for (var i = 0; i < docs.length; i++) docs[i].id: i,
     };
- 
+
     sortedDocs.sort((a, b) {
       // 1. PRIORITÉ ABSOLUE : Messages non lus (ordre décroissant)
       final aUnread = unreadByUser[a.id] ?? 0;
       final bUnread = unreadByUser[b.id] ?? 0;
- 
+
       if (aUnread > 0 || bUnread > 0) {
         // Si l'un a des non lus et pas l'autre, celui avec non lus vient en premier
         if (aUnread > 0 && bUnread == 0) return -1;
@@ -97,34 +107,34 @@ class UsersListSection extends StatelessWidget {
         // Si les deux ont des non lus, trier par nombre décroissant
         if (aUnread != bUnread) return bUnread.compareTo(aUnread);
       }
- 
+
       // 2. DEUXIÈME PRIORITÉ : Conversations existantes (avec activité)
       final aTs = lastActivityByUser[a.id];
       final bTs = lastActivityByUser[b.id];
- 
+
       // Si l'un a une conversation et pas l'autre
       if (aTs != null && bTs == null) return -1; // a en premier
-      if (bTs != null && aTs == null) return 1;  // b en premier
- 
+      if (bTs != null && aTs == null) return 1; // b en premier
+
       // Si les deux ont une conversation, trier par date (plus récent en premier)
       if (aTs != null && bTs != null) {
         final tsComparison = bTs.compareTo(aTs);
         if (tsComparison != 0) return tsComparison;
       }
- 
+
       // 3. DERNIÈRE PRIORITÉ : Utilisateurs sans conversation (ordre alphabétique)
       if (aTs == null && bTs == null) {
         // Garder l'ordre original de Firestore ou trier alphabétiquement
         return (indexById[a.id] ?? 0).compareTo(indexById[b.id] ?? 0);
       }
- 
+
       // 4. En cas d'égalité parfaite, garder l'ordre original
       return (indexById[a.id] ?? 0).compareTo(indexById[b.id] ?? 0);
     });
- 
+
     return sortedDocs;
   }
- 
+
   (Color, String) _getRoleInfo(String? role) {
     switch (role) {
       case 'educator':
@@ -137,7 +147,7 @@ class UsersListSection extends StatelessWidget {
         return (const Color(0xFF006F1D), 'Parent');
     }
   }
- 
+
   Widget _buildUserCard({
     required BuildContext context,
     required String userId,
@@ -203,7 +213,7 @@ class UsersListSection extends StatelessWidget {
       ),
     );
   }
- 
+
   Widget _buildAvatarWithBadge({
     required String photoUrl,
     required String firstName,
@@ -234,7 +244,7 @@ class UsersListSection extends StatelessWidget {
       ],
     );
   }
- 
+
   Widget _buildUnreadBadge(int unreadCount) {
     return Positioned(
       top: -2,
@@ -279,7 +289,7 @@ class UsersListSection extends StatelessWidget {
       ),
     );
   }
- 
+
   Widget _buildInitialsAvatar(String firstName, Color color) {
     return Container(
       color: color.withValues(alpha: 0.15),
@@ -295,7 +305,7 @@ class UsersListSection extends StatelessWidget {
       ),
     );
   }
- 
+
   Widget _buildUserInfo({
     required String firstName,
     required String lastName,
@@ -360,7 +370,7 @@ class UsersListSection extends StatelessWidget {
       ],
     );
   }
- 
+
   Widget _buildMessageButton() {
     return Container(
       padding: const EdgeInsets.all(10),

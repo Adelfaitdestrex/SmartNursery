@@ -1,12 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/features/classes/models/class_model.dart';
 import 'package:smartnursery/features/classes/services/class_service.dart';
+import 'package:smartnursery/shared/widgets/admin_profile_avatar.dart';
 import 'admin_add_user_screen.dart';
 import 'admin_add_child_screen.dart';
 import 'admin_edit_user_screen.dart';
 import 'admin_manage_classes_screen.dart';
+import 'add_children_flow_page.dart';
+import 'face_management_screen.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -193,17 +197,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               ),
             ],
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF91F78E), width: 2),
-              image: const DecorationImage(
-                image: NetworkImage('https://i.pravatar.cc/150?img=47'),
-                fit: BoxFit.cover,
-              ),
-            ),
+          const AdminProfileAvatar(
+            size: 40,
+            borderColor: Color(0xFF91F78E),
+            borderWidth: 2,
           ),
         ],
       ),
@@ -408,16 +405,22 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             children: snapshot.data!.docs.map((DocumentSnapshot document) {
               Map<String, dynamic> data =
                   document.data()! as Map<String, dynamic>;
+              final userId = document.id;
+              final userName = data['name'] as String? ?? 'No Name';
+              final userRole = data['role'] as String? ?? 'No Role';
+              final hasFaceData = data['hasFaceData'] as bool? ?? false;
               return _UserCard(
-                name: data['name'] ?? 'No Name',
-                role: data['role'] ?? 'No Role',
+                name: userName,
+                role: userRole,
                 roleColor: const Color(0xFFB4FDB4),
                 roleTextColor: const Color(0xFF1F632C),
                 avatarUrl:
                     data['profileImageUrl'] ?? 'https://i.pravatar.cc/150',
                 isActive: data['isActive'] ?? true,
                 isInactiveOpacity: !(data['isActive'] ?? true),
-                onDelete: () => document.reference.delete(),
+                hasFaceData: hasFaceData,
+                onDelete: () =>
+                    _deleteUserWithConfirmation(context, document, userName),
                 onEdit: () {
                   Navigator.push(
                     context,
@@ -426,6 +429,32 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     ),
                   );
                 },
+                onManageFace: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FaceManagementScreen(
+                        userId: userId,
+                        userName: userName,
+                        userRole: userRole,
+                      ),
+                    ),
+                  );
+                },
+                onAddChild: userRole == 'parent'
+                    ? () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddChildrenFlowPage(
+                              parentId: userId,
+                              numberOfChildren: 1,
+                              nurseryId: data['nurseryId'] ?? '',
+                            ),
+                          ),
+                        );
+                      }
+                    : null,
               );
             }).toList(),
           ),
@@ -662,6 +691,71 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       ),
     );
   }
+
+  /// Affiche une boîte de dialogue de confirmation avant de supprimer un utilisateur
+  Future<void> _deleteUserWithConfirmation(
+    BuildContext context,
+    DocumentSnapshot document,
+    String userName,
+  ) async {
+    // Empêcher l'admin de se supprimer lui-même
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (document.id == currentUid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Vous ne pouvez pas supprimer votre propre compte.',
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Supprimer le compte'),
+        content: Text(
+          'Êtes-vous sûr de vouloir supprimer le compte de $userName ? Cette action ne peut pas être annulée.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await document.reference.delete();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$userName supprimé avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur lors de la suppression: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 }
 
 class _UserCard extends StatelessWidget {
@@ -672,8 +766,11 @@ class _UserCard extends StatelessWidget {
   final String avatarUrl;
   final bool isActive;
   final bool isInactiveOpacity;
+  final bool hasFaceData;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback onManageFace;
+  final VoidCallback? onAddChild;
 
   const _UserCard({
     required this.name,
@@ -683,43 +780,76 @@ class _UserCard extends StatelessWidget {
     required this.avatarUrl,
     required this.isActive,
     this.isInactiveOpacity = false,
+    this.hasFaceData = false,
     required this.onDelete,
     required this.onEdit,
+    required this.onManageFace,
+    this.onAddChild,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 96,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: isInactiveOpacity ? 0.8 : 1.0),
         borderRadius: BorderRadius.circular(32),
       ),
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isInactiveOpacity
-                    ? const Color(0xFFD6E6DB)
-                    : const Color(0x4D91F78E), // rgba(145,247,142,0.3)
-                width: 2,
+          // ── Avatar avec badge visage ───────────────────────────────────
+          Stack(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isInactiveOpacity
+                        ? const Color(0xFFD6E6DB)
+                        : const Color(0x4D91F78E),
+                    width: 2,
+                  ),
+                  image: DecorationImage(
+                    image: NetworkImage(avatarUrl),
+                    fit: BoxFit.cover,
+                    colorFilter: isInactiveOpacity
+                        ? const ColorFilter.mode(
+                            Colors.grey,
+                            BlendMode.saturation,
+                          )
+                        : null,
+                  ),
+                ),
               ),
-              image: DecorationImage(
-                image: NetworkImage(avatarUrl),
-                fit: BoxFit.cover,
-                // Grayscale if inactive
-                colorFilter: isInactiveOpacity
-                    ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
-                    : null,
+              // Petit badge visage en bas à droite de l'avatar
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: hasFaceData
+                        ? const Color(0xFF006F1D)
+                        : const Color(0xFFD6E6DB),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Icon(
+                    hasFaceData ? Icons.face : Icons.face_retouching_off,
+                    size: 9,
+                    color: hasFaceData ? Colors.white : const Color(0xFF546259),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 16),
+
+          const SizedBox(width: 12),
+
+          // ── Infos utilisateur ─────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -727,9 +857,10 @@ class _UserCard extends StatelessWidget {
               children: [
                 Text(
                   name,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontFamily: 'Plus Jakarta Sans',
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF28352E),
                     height: 1.2,
@@ -751,17 +882,17 @@ class _UserCard extends StatelessWidget {
                         role,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: roleTextColor,
                           height: 1.2,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Container(
-                      width: 6,
-                      height: 6,
+                      width: 5,
+                      height: 5,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isActive
@@ -774,12 +905,10 @@ class _UserCard extends StatelessWidget {
                       isActive ? 'Actif' : 'Inactif',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
                         color: isActive
                             ? const Color(0xFF546259)
                             : const Color(0x99546259),
-                        height: 1.2,
                       ),
                     ),
                   ],
@@ -787,39 +916,114 @@ class _UserCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onEdit,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFE5F1E7),
-              ),
-              child: const Icon(
-                Icons.edit_outlined,
-                color: Color(0xFF28352E),
-                size: 18,
-              ),
+
+          // ── Menu actions ─────────────────────────────────────────────
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert,
+              color: Color(0xFF546259),
+              size: 22,
             ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: onDelete,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFE5F1E7),
-              ),
-              child: const Icon(
-                Icons.delete_outline,
-                color: Color(0xFF28352E),
-                size: 18,
-              ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'face',
+                child: Row(
+                  children: [
+                    Icon(
+                      hasFaceData
+                          ? Icons.face_retouching_natural
+                          : Icons.face_retouching_off,
+                      size: 20,
+                      color: hasFaceData
+                          ? const Color(0xFF006F1D)
+                          : const Color(0xFF546259),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      hasFaceData ? 'Gérer les visages' : 'Ajouter un visage',
+                      style: TextStyle(
+                        color: hasFaceData
+                            ? const Color(0xFF006F1D)
+                            : const Color(0xFF28352E),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (onAddChild != null)
+                const PopupMenuItem(
+                  value: 'child',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.child_care,
+                        size: 20,
+                        color: Color(0xFF286C34),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Ajouter un enfant',
+                        style: TextStyle(
+                          color: Color(0xFF28352E),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.edit_outlined,
+                      size: 20,
+                      color: Color(0xFF546259),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Modifier',
+                      style: TextStyle(
+                        color: Color(0xFF28352E),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text(
+                      'Supprimer',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (value) {
+              switch (value) {
+                case 'face':
+                  onManageFace();
+                case 'child':
+                  onAddChild?.call();
+                case 'edit':
+                  onEdit();
+                case 'delete':
+                  onDelete();
+              }
+            },
           ),
         ],
       ),

@@ -84,8 +84,7 @@ class ActivityThemes {
     ),
   };
 
-  static ActivityTheme fromKey(String key) =>
-      _themes[key] ?? _themes['green']!;
+  static ActivityTheme fromKey(String key) => _themes[key] ?? _themes['green']!;
 
   /// Toutes les clés disponibles (utile pour un sélecteur de thème).
   static List<String> get keys => _themes.keys.toList();
@@ -107,6 +106,9 @@ class ActivityModel {
   /// C'est cette valeur qui est stockée dans Firestore.
   final String themeKey;
 
+  final String nurseryId;
+  final List<String> participants;
+
   ActivityModel({
     this.id,
     required this.title,
@@ -115,6 +117,8 @@ class ActivityModel {
     required this.endTime,
     required this.description,
     required this.author,
+    required this.nurseryId,
+    this.participants = const [],
     this.themeKey = 'green',
   });
 
@@ -132,9 +136,19 @@ class ActivityModel {
       return ActivityStatus.aVenir;
     } else {
       final start = DateTime(
-          now.year, now.month, now.day, startTime.hour, startTime.minute);
-      final end =
-          DateTime(now.year, now.month, now.day, endTime.hour, endTime.minute);
+        now.year,
+        now.month,
+        now.day,
+        startTime.hour,
+        startTime.minute,
+      );
+      final end = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        endTime.hour,
+        endTime.minute,
+      );
       if (now.isBefore(start)) return ActivityStatus.aVenir;
       if (now.isAfter(end)) return ActivityStatus.terminee;
       return ActivityStatus.enCours;
@@ -153,16 +167,18 @@ class ActivityModel {
   /// directe à `cloud_firestore.Timestamp` dans le modèle.
   /// Côté repository, vous pouvez remplacer `date` par `Timestamp.fromMillisecondsSinceEpoch(map['date'])`.
   Map<String, dynamic> toMap() => {
-        'title': title,
-        'date': date.millisecondsSinceEpoch, // int → Timestamp Firestore-compatible
-        'startHour': startTime.hour,
-        'startMinute': startTime.minute,
-        'endHour': endTime.hour,
-        'endMinute': endTime.minute,
-        'description': description,
-        'author': author,
-        'themeKey': themeKey,
-      };
+    'title': title,
+    'date': date.millisecondsSinceEpoch, // int → Timestamp Firestore-compatible
+    'startHour': startTime.hour,
+    'startMinute': startTime.minute,
+    'endHour': endTime.hour,
+    'endMinute': endTime.minute,
+    'description': description,
+    'author': author,
+    'themeKey': themeKey,
+    'nurseryId': nurseryId,
+    'participants': participants,
+  };
 
   /// Reconstruit un [ActivityModel] depuis un document Firestore.
   /// [id] correspond à `doc.id`.
@@ -183,6 +199,8 @@ class ActivityModel {
       description: map['description'] as String,
       author: map['author'] as String,
       themeKey: (map['themeKey'] as String?) ?? 'green',
+      nurseryId: map['nurseryId'] as String? ?? '',
+      participants: List<String>.from(map['participants'] ?? []),
     );
   }
 
@@ -197,6 +215,8 @@ class ActivityModel {
     String? description,
     String? author,
     String? themeKey,
+    String? nurseryId,
+    List<String>? participants,
   }) {
     return ActivityModel(
       id: id ?? this.id,
@@ -207,6 +227,8 @@ class ActivityModel {
       description: description ?? this.description,
       author: author ?? this.author,
       themeKey: themeKey ?? this.themeKey,
+      nurseryId: nurseryId ?? this.nurseryId,
+      participants: participants ?? this.participants,
     );
   }
 }
@@ -217,6 +239,17 @@ final _now = DateTime.now();
 
 final List<ActivityModel> dummyActivities = [
   ActivityModel(
+    title: 'Sieste de l\'après-midi 🌙',
+    date: _now.subtract(const Duration(days: 0)),
+    startTime: const TimeOfDay(hour: 13, minute: 30),
+    endTime: const TimeOfDay(hour: 15, minute: 0),
+    description:
+        'Temps calme et sieste réparatrice avec musique douce et ambiance tamisée.',
+    author: 'Équipe éducative',
+    themeKey: 'purple',
+    nurseryId: 'dummy_nursery',
+  ),
+  ActivityModel(
     title: 'Atelier Dessin & Coloriage 🎨',
     date: _now,
     startTime: TimeOfDay(hour: _now.hour, minute: _now.minute >= 30 ? 0 : 30),
@@ -225,6 +258,7 @@ final List<ActivityModel> dummyActivities = [
         'Exploration des couleurs primaires et\ncréation d\'une fresque murale collective.',
     author: 'Mme. Sophie — Littel Angels',
     themeKey: 'red',
+    nurseryId: 'dummy_nursery',
   ),
   ActivityModel(
     title: 'Heure du Conte 📖',
@@ -235,6 +269,7 @@ final List<ActivityModel> dummyActivities = [
         '"Le Petit Nuage Voyageur" : lecture\ninteractive et questions-réponses.',
     author: 'M. Thomas — Young Explorers',
     themeKey: 'blue',
+    nurseryId: 'dummy_nursery',
   ),
   ActivityModel(
     title: 'Éveil Musical & Chant 🎵',
@@ -245,6 +280,7 @@ final List<ActivityModel> dummyActivities = [
         'Découverte des percussions et\napprentissage de comptines rythmées.',
     author: 'Mme. Claire — Future Stars',
     themeKey: 'purple',
+    nurseryId: 'dummy_nursery',
   ),
   ActivityModel(
     title: 'Jeux Extérieurs ⚽',
@@ -255,6 +291,7 @@ final List<ActivityModel> dummyActivities = [
         'Parcours de motricité et jeux de ballon dans\nla cour de récréation.',
     author: 'M. Thomas — Littel Angel',
     themeKey: 'orange',
+    nurseryId: 'dummy_nursery',
   ),
   ActivityModel(
     title: 'Puzzles & Logique 🧩',
@@ -265,6 +302,7 @@ final List<ActivityModel> dummyActivities = [
         'Atelier de manipulation pour développer la\nconcentration et la résolution de problèmes.',
     author: 'Mme. Sophie — Future Stars',
     themeKey: 'green',
+    nurseryId: 'dummy_nursery',
   ),
   ActivityModel(
     title: 'Chiffres & Lettres 🔤',
@@ -275,5 +313,6 @@ final List<ActivityModel> dummyActivities = [
         'Introduction ludique à l\'alphabet et aux\npremiers nombres via des jeux sensoriels.',
     author: 'Mme. Claire — Young Explorers',
     themeKey: 'amber',
+    nurseryId: 'dummy_nursery',
   ),
 ];

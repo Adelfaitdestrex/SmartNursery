@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 import 'package:smartnursery/features/cantine/screens/cantine_page.dart';
@@ -6,19 +8,47 @@ import 'package:smartnursery/features/messages/screens/messages_page.dart';
 import 'package:smartnursery/features/activities/screens/activities_page.dart';
 import 'package:smartnursery/features/classes/screens/classes_page.dart';
 
-class SharedBottomNavbar extends StatelessWidget {
+class SharedBottomNavbar extends StatefulWidget {
   final int currentIndex;
 
   const SharedBottomNavbar({super.key, this.currentIndex = 0});
 
+  @override
+  State<SharedBottomNavbar> createState() => _SharedBottomNavbarState();
+}
+
+class _SharedBottomNavbarState extends State<SharedBottomNavbar> {
   static const String _iconFlux = 'assets/icons/Icon.png';
   static const String _iconCantine = 'assets/icons/cafeteria.png';
   static const String _iconMessage = 'assets/icons/email.png';
   static const String _iconActivite = 'assets/icons/crayon.png';
   static const String _iconClasse = 'assets/icons/sac-decole.png';
 
+  String _userRole = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserRole();
+  }
+
+  Future<void> _fetchUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _userRole = (doc.data()?['role'] ?? '').toString().toLowerCase();
+        });
+      }
+    }
+  }
+
   void _onNavigate(BuildContext context, int index) {
-    if (index == currentIndex) return;
+    if (index == widget.currentIndex) return;
     
     Widget page;
     switch (index) {
@@ -54,6 +84,8 @@ class SharedBottomNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showClasses = _userRole == 'admin' || _userRole == 'educateur' || _userRole == 'educator';
+
     return Container(
       height: 80, // Slightly reduced to fit better when glued to bottom
       decoration: BoxDecoration(
@@ -66,33 +98,34 @@ class SharedBottomNavbar extends StatelessWidget {
             _NavItem(
               label: 'Flux', 
               iconPath: _iconFlux, 
-              active: currentIndex == 0,
+              active: widget.currentIndex == 0,
               onTap: () => _onNavigate(context, 0),
             ),
             _NavItem(
               label: 'Cantine', 
               iconPath: _iconCantine, 
-              active: currentIndex == 1,
+              active: widget.currentIndex == 1,
               onTap: () => _onNavigate(context, 1),
             ),
             _NavItem(
               label: 'Message', 
               iconPath: _iconMessage, 
-              active: currentIndex == 2,
+              active: widget.currentIndex == 2,
               onTap: () => _onNavigate(context, 2),
             ),
             _NavItem(
               label: 'Activité', 
               iconPath: _iconActivite, 
-              active: currentIndex == 3,
+              active: widget.currentIndex == 3,
               onTap: () => _onNavigate(context, 3),
             ),
-            _NavItem(
-              label: 'Classe', 
-              iconPath: _iconClasse, 
-              active: currentIndex == 4,
-              onTap: () => _onNavigate(context, 4),
-            ),
+            if (showClasses)
+              _NavItem(
+                label: 'Classe', 
+                iconPath: _iconClasse, 
+                active: widget.currentIndex == 4,
+                onTap: () => _onNavigate(context, 4),
+              ),
           ],
         ),
       );

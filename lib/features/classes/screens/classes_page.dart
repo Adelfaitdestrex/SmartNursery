@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:smartnursery/features/classes/models/class_model.dart';
 import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 import 'package:smartnursery/features/classes/screens/instance_classe.dart';
+import 'package:smartnursery/features/classes/services/class_service.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
 
 class ClassesPage extends StatelessWidget {
@@ -40,96 +42,75 @@ class ClassesPage extends StatelessWidget {
 
             // Scrollable Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 32,
-                ),
-                child: Column(
-                  children: [
-                    // Card 1 (Little Angels - Teal/Light Blue)
-                    _ClassCard(
-                      title: 'Little Angels',
-                      ageGroup: '5 mois - 2 ans',
-                      backgroundColor: const Color(0xFF7DF0FC), // Cyan clair
-                      titleColor: const Color(0xFF0F5A4D),
-                      subtitleColor: const Color(
-                        0xFF0F5A4D,
-                      ).withValues(alpha: 0.8),
-                      imagePath: 'assets/icons/enfant_classe1.png',
-                      classId: 'class_little_angels',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SmartNurseryClassPage(
-                              classId: 'class_little_angels',
-                              className: 'Little Angels',
-                              classColor: Color(0xFF8BC34A),
-                              classBgColor: Color(0xFFD7E8B8),
-                            ),
-                          ),
-                        );
-                      },
+              child: StreamBuilder<List<ClassModel>>(
+                stream: ClassService().getClassesStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'Impossible de charger les classes.\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+
+                  final classes = snapshot.data ?? [];
+
+                  if (classes.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Aucune classe disponible pour le moment.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 32,
                     ),
+                    itemCount: classes.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 24),
+                    itemBuilder: (context, index) {
+                      final classData = classes[index];
+                      final visual = _ClassVisual.fromClass(classData, index);
 
-                    const SizedBox(height: 24),
-
-                    // Card 2 (Young Explorers - Yellow)
-                    _ClassCard(
-                      title: 'Young\nExplorers',
-                      ageGroup: '2 - 4 ans',
-                      backgroundColor: const Color(0xFFFEE34F), // Jaune soleil
-                      titleColor: const Color(0xFF6B5A00),
-                      subtitleColor: const Color(
-                        0xFF6B5A00,
-                      ).withValues(alpha: 0.8),
-                      imagePath: 'assets/icons/enfant-classe2.png',
-                      classId: 'class_young_explorers',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SmartNurseryClassPage(
-                              classId: 'class_young_explorers',
-                              className: 'Young Explorers',
-                              classColor: Color(0xFFC8A800),
-                              classBgColor: Color(0xFFFFF8D0),
+                      return _ClassCard(
+                        title: classData.name,
+                        ageGroup: classData.ageRange,
+                        backgroundColor: visual.backgroundColor,
+                        titleColor: visual.titleColor,
+                        subtitleColor: visual.subtitleColor,
+                        imagePath: visual.imagePath,
+                        classId: classData.classId,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SmartNurseryClassPage(
+                                classId: classData.classId,
+                                className: classData.name,
+                                classColor: visual.classColor,
+                                classBgColor: visual.classBgColor,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Card 3 (Future Stars - Red/Pink)
-                    _ClassCard(
-                      title: 'Future Stars',
-                      ageGroup: '4 - 6 ans',
-                      backgroundColor: const Color(0xFFFF8B9E), // Rose pastel
-                      titleColor: const Color(0xFF7A1D1D),
-                      subtitleColor: const Color(
-                        0xFF7A1D1D,
-                      ).withValues(alpha: 0.8),
-                      imagePath: 'assets/icons/jeux-classe3.png',
-                      classId: 'class_future_stars',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SmartNurseryClassPage(
-                              classId: 'class_future_stars',
-                              className: 'Future Stars',
-                              classColor: Color(0xFFD04060),
-                              classBgColor: Color(0xFFFFE0E8),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
@@ -139,6 +120,94 @@ class ClassesPage extends StatelessWidget {
   }
 }
 
+class _ClassVisual {
+  final Color backgroundColor;
+  final Color titleColor;
+  final Color subtitleColor;
+  final Color classColor;
+  final Color classBgColor;
+  final String imagePath;
+
+  const _ClassVisual({
+    required this.backgroundColor,
+    required this.titleColor,
+    required this.subtitleColor,
+    required this.classColor,
+    required this.classBgColor,
+    required this.imagePath,
+  });
+
+  static const List<String> _fallbackImages = [
+    'assets/icons/enfant_classe1.png',
+    'assets/icons/enfant-classe2.png',
+    'assets/icons/jeux-classe3.png',
+  ];
+
+  static _ClassVisual fromClass(ClassModel classData, int index) {
+    final bg = _hexToColor(classData.color) ?? _fallbackBg(index);
+    
+    Color title;
+    final hexColor = classData.color?.toUpperCase() ?? '';
+    if (hexColor == '#7DF0FC') {
+      title = const Color(0xFF0F5A4D);
+    } else if (hexColor == '#FEE34F') {
+      title = const Color(0xFF6B5A00);
+    } else if (hexColor == '#FF8B9E') {
+      title = const Color(0xFF7A1D1D);
+    } else {
+      title = _isDark(bg) ? Colors.white : const Color(0xFF1C1C1C);
+    }
+
+    final subtitle = title.withValues(alpha: 0.8);
+    final classColor = _darken(bg, 0.30);
+    final classBgColor = _lighten(bg, 0.35);
+
+    return _ClassVisual(
+      backgroundColor: bg,
+      titleColor: title,
+      subtitleColor: subtitle,
+      classColor: classColor,
+      classBgColor: classBgColor,
+      imagePath: _imageForTemplate(classData.classTemplate, index),
+    );
+  }
+
+  static String _imageForTemplate(String? template, int index) {
+    final key = (template ?? '').toLowerCase();
+    if (key.contains('angel')) return _fallbackImages[0];
+    if (key.contains('explorer')) return _fallbackImages[1];
+    if (key.contains('star')) return _fallbackImages[2];
+    return _fallbackImages[index % _fallbackImages.length];
+  }
+
+  static Color? _hexToColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    final cleaned = hex.replaceFirst('#', '').trim();
+    if (cleaned.length != 6) return null;
+    return Color(int.parse('0xFF$cleaned'));
+  }
+
+  static Color _fallbackBg(int index) {
+    const colors = [Color(0xFF7DF0FC), Color(0xFFFEE34F), Color(0xFFFF8B9E)];
+    return colors[index % colors.length];
+  }
+
+  static bool _isDark(Color color) {
+    return color.computeLuminance() < 0.55;
+  }
+
+  static Color _darken(Color color, double amount) {
+    final hsl = HSLColor.fromColor(color);
+    final darker = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+    return darker.toColor();
+  }
+
+  static Color _lighten(Color color, double amount) {
+    final hsl = HSLColor.fromColor(color);
+    final lighter = hsl.withLightness((hsl.lightness + amount).clamp(0.0, 1.0));
+    return lighter.toColor();
+  }
+}
 
 class _ClassCard extends StatelessWidget {
   final String title;
@@ -160,7 +229,6 @@ class _ClassCard extends StatelessWidget {
     required this.classId,
     this.onTap,
   });
-
 
   @override
   Widget build(BuildContext context) {

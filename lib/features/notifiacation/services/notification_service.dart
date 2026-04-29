@@ -1,11 +1,104 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smartnursery/features/notifiacation/models/notification_model.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+
+  /// Créer une notification générique pour tous les utilisateurs d'une crèche
+  /// (sauf l'utilisateur source)
+  Future<void> createNotification({
+    required String nurseryId,
+    required String sourceUserId,
+    required String sourceUserName,
+    required String type, // 'message', 'activity', 'post', etc.
+    required String title,
+    required String message,
+    String? sourceUserProfileImage,
+    String? relatedDocumentId, // ID du post, message, activité, etc.
+    Map<String, String>? additionalData,
+  }) async {
+    try {
+      if (nurseryId.isEmpty) {
+        debugPrint('⚠️ nurseryId vide - notifications non créées');
+        return;
+      }
+
+      // Récupérer tous les utilisateurs de la crèche
+      final usersSnapshot = await _firestore
+          .collection('users')
+          .where('nurseryId', isEqualTo: nurseryId)
+          .get();
+
+      debugPrint(
+        '👥 Trouvé ${usersSnapshot.docs.length} utilisateurs pour notification ($type)',
+      );
+
+      int notificationCount = 0;
+
+      // Créer une notification pour chaque utilisateur (sauf la source)
+      for (final userDoc in usersSnapshot.docs) {
+        final userId = userDoc.id;
+
+        if (userId == sourceUserId) {
+          continue; // Ne pas notifier l'utilisateur source
+        }
+
+        try {
+          final newNotificationRef = _firestore
+              .collection('notifications')
+              .doc();
+
+          final notification = NotificationModel(
+            notificationId: newNotificationRef.id,
+            userId: userId,
+            type: type,
+            title: title,
+            message: message,
+            sourceUserId: sourceUserId,
+            sourceUserName: sourceUserName,
+            sourceUserProfileImage: sourceUserProfileImage,
+            postId: relatedDocumentId,
+            isRead: false,
+            createdAt: DateTime.now(),
+            nurseryId: nurseryId,
+          );
+
+          await newNotificationRef.set(notification.toMap());
+          notificationCount++;
+
+          // Envoyer la notification push via Cloud Function
+          try {
+            await _functions.httpsCallable('sendPushNotification').call({
+              'userId': userId,
+              'title': title,
+              'message': message,
+              'data': {
+                'type': type,
+                'sourceUserId': sourceUserId,
+                'notificationId': newNotificationRef.id,
+                ...?additionalData,
+              },
+            });
+          } catch (e) {
+            // Si la function échoue, la notification Firestore est quand même créée
+            debugPrint('⚠️ Erreur envoi push notification pour $userId: $e');
+          }
+        } catch (e) {
+          debugPrint('❌ Erreur création notification pour $userId: $e');
+        }
+      }
+
+      debugPrint('✅ $notificationCount notifications créées (type: $type)');
+    } catch (e) {
+      debugPrint('❌ Erreur critique lors de la création des notifications: $e');
+      rethrow;
+    }
+  }
 
   /// Crée une notification pour tous les utilisateurs d'une crèche
   /// (sauf l'auteur du post)
@@ -100,12 +193,14 @@ class NotificationService {
       return _firestore
           .collection('notifications')
           .where('userId', isEqualTo: user.uid)
-          .orderBy('createdAt', descending: true)
           .snapshots()
           .map((snapshot) {
-            return snapshot.docs
+            final notifications = snapshot.docs
                 .map((doc) => NotificationModel.fromMap(doc.data(), doc.id))
                 .toList();
+            // Tri côté Dart pour éviter l'index composite
+            notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return notifications;
           })
           .handleError((error) {
             debugPrint('❌ Erreur dans le stream des notifications: $error');
@@ -126,13 +221,17 @@ class NotificationService {
       return _firestore
           .collection('notifications')
           .where('userId', isEqualTo: user.uid)
-          .where('isRead', isEqualTo: false)
-          .orderBy('createdAt', descending: true)
           .snapshots()
           .map((snapshot) {
-            return snapshot.docs
+            final notifications = snapshot.docs
                 .map((doc) => NotificationModel.fromMap(doc.data(), doc.id))
+                .toList()
+                // Filtre côté Dart pour les notifications non lues
+                .where((notif) => !notif.isRead)
                 .toList();
+            // Tri côté Dart pour éviter l'index composite
+            notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return notifications;
           })
           .handleError((error) {
             debugPrint(

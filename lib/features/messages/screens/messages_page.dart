@@ -101,7 +101,7 @@ class _MessagesPageState extends State<MessagesPage> {
             // Content - Search results or conversations
             Expanded(
               child: _searchController.text.isNotEmpty
-                  ? SearchSection(searchController: _searchController)
+                  ? SearchSection(searchQuery: _searchController.text)
                   : ConversationsView(
                       currentUserId: currentUserId,
                       messageService: _messageService,

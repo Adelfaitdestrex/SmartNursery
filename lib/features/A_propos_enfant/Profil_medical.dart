@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:smartnursery/features/A_propos_enfant/models/child_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ProfilMedical extends StatelessWidget {
-  const ProfilMedical({super.key});
+  final ChildModel child;
+  const ProfilMedical({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +45,9 @@ class ProfilMedical extends StatelessWidget {
                       child: const Icon(Icons.arrow_back, color: Colors.black),
                     ),
                   ),
-                  const Text(
-                    "Profil de Léo",
-                    style: TextStyle(
+                  Text(
+                    "Profil de ${child.firstName}",
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -79,22 +84,31 @@ class ProfilMedical extends StatelessWidget {
                     backgroundImage: AssetImage("assets/icons/avatar-logo.png.png"),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    "Léo",
-                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
+                  Text(
+                    child.firstName,
+                    style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800),
                   ),
-                  const Text(
-                    "2 ans",
-                    style: TextStyle(
+                  Text(
+                    _calculateAge(child.dateOfBirth),
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF486912),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    "Groupe Coccinelle • Plein Temps",
-                    style: TextStyle(color: Colors.grey[700]),
+                  FutureBuilder<DocumentSnapshot>(
+                    future: child.classId != null ? FirebaseFirestore.instance.collection('classes').doc(child.classId).get() : null,
+                    builder: (context, snapshot) {
+                      String className = 'Aucune classe';
+                      if (snapshot.hasData && snapshot.data!.exists) {
+                        className = snapshot.data!.get('name') ?? 'Classe inconnue';
+                      }
+                      return Text(
+                        className,
+                        style: TextStyle(color: Colors.grey[700]),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -126,9 +140,7 @@ class ProfilMedical extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        onPressed: () {
-                          // action plan alimentaire
-                        },
+                        onPressed: () => _showMealPlanDialog(context),
                         child: const Text(
                           "Plan Alimentaire",
                           style: TextStyle(color: Color(0xFF3B5B02)),
@@ -144,27 +156,40 @@ class ProfilMedical extends StatelessWidget {
 
             // DETAILS PERSONNELS
             _buildInfoCard("Détails Personnels", [
-              {"label": "Date de naissance", "value": "14 Mars 2022"},
-              {"label": "Langue", "value": "Français"},
-              {"label": "Sexe", "value": "Masculin"},
+              {"label": "Date de naissance", "value": DateFormat('dd MMMM yyyy', 'fr_FR').format(child.dateOfBirth)},
+              {"label": "Sexe", "value": child.gender},
             ]),
 
             const SizedBox(height: 24),
 
             // INFOS MEDICALES
             _buildInfoCard("Infos Médicales", [
-              {"label": "Allergies", "value": "Arachides, Produits laitiers"},
-              {"label": "Groupe sanguin", "value": "A+"},
-              {"label": "Pédiatre", "value": "Dr. Martin (01 23 45 67 89)"},
+              {"label": "Allergies", "value": child.allergies.isNotEmpty ? child.allergies.join(", ") : "Aucune"},
+              {"label": "Maladies", "value": (child.medicinalInfo?['maladies'] as List?)?.join(', ') ?? "Aucune"},
             ]),
 
             const SizedBox(height: 24),
 
             // PARENTS
-            _buildInfoCard("Parents", [
-              {"label": "Sophie Laurent", "value": "Maman • Contact Principal"},
-              {"label": "Thomas Laurent", "value": "Papa • Contact d’urgence"},
-            ]),
+            FutureBuilder<QuerySnapshot>(
+              future: FirebaseFirestore.instance.collection('users').where(FieldPath.documentId, whereIn: child.parentIds.isNotEmpty ? child.parentIds : ['none']).get(),
+              builder: (context, snapshot) {
+                List<Map<String, String>> parentItems = [];
+                if (snapshot.hasData) {
+                  for (var doc in snapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    parentItems.add({
+                      "label": "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}",
+                      "value": data['role'] ?? 'Parent',
+                    });
+                  }
+                }
+                if (parentItems.isEmpty) {
+                  parentItems.add({"label": "Aucun parent", "value": "-"});
+                }
+                return _buildInfoCard("Parents", parentItems);
+              },
+            ),
 
             const SizedBox(height: 24),
 
@@ -327,6 +352,159 @@ class ProfilMedical extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  String _calculateAge(DateTime birthDate) {
+    DateTime currentDate = DateTime.now();
+    int age = currentDate.year - birthDate.year;
+    int month1 = currentDate.month;
+    int month2 = birthDate.month;
+    if (month2 > month1) {
+      age--;
+    } else if (month1 == month2) {
+      int day1 = currentDate.day;
+      int day2 = birthDate.day;
+      if (day2 > day1) {
+        age--;
+      }
+    }
+    
+    if (age == 0) {
+      int months = currentDate.month - birthDate.month;
+      if (months < 0) months += 12;
+      return "$months mois";
+    }
+    return "$age ans";
+  }
+
+  void _showMealPlanDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return FractionallySizedBox(
+          heightFactor: 0.6,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Plan Alimentaire",
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF3B5B02)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('enfants')
+                        .doc(child.childId)
+                        .collection('meal_requests')
+                        .orderBy('date', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(child: Text("Erreur: ${snapshot.error}"));
+                      }
+                      final docs = snapshot.data?.docs ?? [];
+                      if (docs.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            "Aucun repas n'a été réservé pour l'instant.",
+                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+                      
+                      return ListView.separated(
+                        itemCount: docs.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final data = docs[index].data() as Map<String, dynamic>;
+                          final mealName = data['mealName'] ?? 'Repas inconnu';
+                          final dateStr = data['date'] ?? ''; 
+                          
+                          // Convert YYYY-MM-DD to standard format
+                          String formattedDate = dateStr;
+                          try {
+                            final parsedDate = DateTime.parse(dateStr);
+                            formattedDate = DateFormat('EEEE dd MMMM', 'fr_FR').format(parsedDate);
+                            // capitalize first letter
+                            formattedDate = formattedDate[0].toUpperCase() + formattedDate.substring(1);
+                          } catch (_) {}
+
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5EC),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.restaurant_menu, color: Color(0xFF486912)),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        mealName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        formattedDate,
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -107,26 +107,40 @@ class _SmartNurseryClassPageState extends State<SmartNurseryClassPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.classBgColor,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: widget.classColor,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: widget.classColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.className,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Plus Jakarta Sans',
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 24,
+            color: widget.classColor,
           ),
         ),
         centerTitle: true,
-        elevation: 0,
       ),
-      body: Column(
-        children: [
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              widget.classColor.withOpacity(0.1),
+              widget.classBgColor.withOpacity(0.3),
+              Colors.white,
+            ],
+            stops: const [0.0, 0.3, 1.0],
+          ),
+        ),
+        child: Column(
+          children: [
           _buildSearchBar(),
           Expanded(
             // ── Écoute le doc de la classe en temps réel ──────────────────
@@ -157,7 +171,7 @@ class _SmartNurseryClassPageState extends State<SmartNurseryClassPage> {
                 // then listen live to any enfants documents that have classId == widget.classId
                 // and merge both sets so new children appear immediately even if one side
                 // has a propagation delay.
-                return FutureBuilder<List<Map<String, dynamic>>>(
+                return FutureBuilder<List<Map<String, dynamic>>> (
                   key: ValueKey(childrenIds.join(',')),
                   future: _fetchChildren(childrenIds),
                   builder: (context, childSnap) {
@@ -252,28 +266,38 @@ class _SmartNurseryClassPageState extends State<SmartNurseryClassPage> {
                             }
 
                             return GridView.builder(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 3,
-                                    childAspectRatio: 0.72,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 15,
+                                    childAspectRatio: 0.75,
+                                    crossAxisSpacing: 20,
+                                    mainAxisSpacing: 25,
                                   ),
                               itemCount: filtered.length,
                               itemBuilder: (context, index) {
                                 final data = filtered[index];
+                                final childId = data['_id'] as String? ?? '';
                                 final firstName = data['firstName'] as String? ?? '';
                                 final lastName = data['lastName'] as String? ?? '';
                                 final gender = data['gender'] as String? ?? '';
                                 final avatarUrl =
                                     data['avatarImageUrl'] as String? ??
                                     _defaultAvatar(gender);
+                                
+                                ImageProvider imageProvider;
+                                if (avatarUrl.startsWith('assets/')) {
+                                  imageProvider = AssetImage(avatarUrl);
+                                } else {
+                                  imageProvider = NetworkImage(avatarUrl);
+                                }
+
                                 return _buildChildCard(
+                                  childId: childId,
                                   firstName: firstName,
                                   lastName: lastName,
                                   gender: gender,
-                                  avatarUrl: avatarUrl,
+                                  imageProvider: imageProvider,
                                 );
                               },
                             );
@@ -281,19 +305,53 @@ class _SmartNurseryClassPageState extends State<SmartNurseryClassPage> {
                         );
                       },
                     );
-
-                      },
-                    );
                   },
-                )
-
+                );
+              },
             ),
-
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 24, right: 24, bottom: 32, top: 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => IncidentReportPage(
+                        classId: widget.classId,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.report_problem_rounded, color: Colors.white),
+                label: const Text(
+                  'Déclarer un incident',
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE53935), // Un rouge signal pour l'incident
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 8,
+                  shadowColor: const Color(0xFFE53935).withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
       ),
     );
   }
-
   // ── Widgets utilitaires ───────────────────────────────────────────────────
 
   Widget _buildEmptyState() {
@@ -332,36 +390,43 @@ class _SmartNurseryClassPageState extends State<SmartNurseryClassPage> {
 
   // ── Action bottom sheet ────────────────────────────────────────────────────
 
-  void _showChildActions(BuildContext context, String childName) {
+  void _showChildActions(BuildContext context, String childId, String childName) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _ChildActionsSheet(
+        childId: childId,
         childName: childName,
         classColor: widget.classColor,
+        classId: widget.classId,
       ),
     );
   }
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: TextField(
-        onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
-        decoration: InputDecoration(
-          hintText: 'Rechercher un enfant...',
-          hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 14),
-          prefixIcon: Icon(Icons.search, color: widget.classColor),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 0,
-            horizontal: 16,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: widget.classColor.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: TextField(
+          onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+          decoration: InputDecoration(
+            hintText: 'Rechercher un enfant...',
+            hintStyle: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: Colors.black45),
+            prefixIcon: Icon(Icons.search_rounded, color: widget.classColor),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
         ),
       ),
@@ -369,77 +434,52 @@ class _SmartNurseryClassPageState extends State<SmartNurseryClassPage> {
   }
 
   Widget _buildChildCard({
+    required String childId,
     required String firstName,
     required String lastName,
     required String gender,
-    required String avatarUrl,
+    required ImageProvider imageProvider,
   }) {
-    final g = gender.toLowerCase();
-    final genderIcon = (g == 'm' || g == 'garçon' || g == 'male')
-        ? '♂'
-        : (g == 'f' || g == 'fille' || g == 'female')
-        ? '♀'
-        : '';
     final fullName = '$firstName $lastName'.trim();
 
     return GestureDetector(
-      onTap: () => _showChildActions(context, fullName),
+      onTap: () => _showChildActions(context, childId, fullName),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 38,
-                backgroundColor: Colors.white,
-                backgroundImage: NetworkImage(avatarUrl),
-                onBackgroundImageError: (_, e) {
-                  debugPrint('Avatar load error: $e');
-                },
-              ),
-              if (genderIcon.isNotEmpty)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: widget.classColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        genderIcon,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: widget.classColor.withOpacity(0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 ),
-            ],
+              ],
+              border: Border.all(
+                color: Colors.white,
+                width: 3.5,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 42,
+              backgroundColor: Colors.white,
+              backgroundImage: imageProvider,
+              onBackgroundImageError: (_, e) {
+                debugPrint('Avatar load error: $e');
+              },
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Text(
             firstName,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: 'Plus Jakarta Sans',
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            lastName,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              color: Colors.black.withValues(alpha: 0.5),
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: Color(0xFF1A2E1A),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -453,10 +493,12 @@ class _SmartNurseryClassPageState extends State<SmartNurseryClassPage> {
 // ── Bottom sheet avec les deux actions ────────────────────────────────────────
 
 class _ChildActionsSheet extends StatelessWidget {
+  final String childId;
   final String childName;
   final Color classColor;
+  final String classId;
 
-  const _ChildActionsSheet({required this.childName, required this.classColor});
+  const _ChildActionsSheet({required this.childId, required this.childName, required this.classColor, required this.classId});
 
   @override
   Widget build(BuildContext context) {
@@ -553,7 +595,8 @@ class _ChildActionsSheet extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => CalendarPage(
-
+                      childId: childId,
+                      childName: childName,
                     ),
                   ),
                 );
@@ -576,7 +619,10 @@ class _ChildActionsSheet extends StatelessWidget {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const IncidentReportPage()),
+                  MaterialPageRoute(builder: (_) => IncidentReportPage(
+                    classId: classId,
+                    initialChildId: childId,
+                  )),
                 );
               },
             ),

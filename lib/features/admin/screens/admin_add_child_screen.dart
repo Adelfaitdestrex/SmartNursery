@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AdminAddChildScreen extends StatefulWidget {
   const AdminAddChildScreen({super.key});
@@ -17,6 +21,27 @@ class _AdminAddChildScreenState extends State<AdminAddChildScreen> {
 
   String _selectedGender = 'Garçon';
   bool _isLoading = false; // Ajout d'un état de chargement
+  Uint8List? _selectedImageBytes;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _selectedImageBytes = bytes;
+        });
+      }
+    } catch (e) {
+      debugPrint("Erreur lors de la sélection de l'image: $e");
+    }
+  }
 
   @override
   void dispose() {
@@ -51,21 +76,28 @@ class _AdminAddChildScreenState extends State<AdminAddChildScreen> {
       DocumentReference nouvelEnfantRef = FirebaseFirestore.instance.collection('enfants').doc();
       String childId = nouvelEnfantRef.id;
 
-      // 3. Attribution d'une image par défaut selon le genre (temporaire, en attendant le vrai picker photo)
-      String defaultImage = _selectedGender == 'Garçon'
-          ? 'https://img.freepik.com/vecteurs-libre/illustration-personnage-anime-garcon-mignon_23-2151199341.jpg'
-          : 'https://img.freepik.com/vecteurs-libre/illustration-personnage-anime-fille-mignonne_23-2151211110.jpg';
+      // 3. Upload image
+      String imageUrl = '';
+      if (_selectedImageBytes != null) {
+        final storageRef = FirebaseStorage.instance.ref().child('enfants_avatars').child('$childId.jpg');
+        await storageRef.putData(_selectedImageBytes!, SettableMetadata(contentType: 'image/jpeg'));
+        imageUrl = await storageRef.getDownloadURL();
+      } else {
+        imageUrl = _selectedGender == 'Garçon'
+            ? 'https://img.freepik.com/vecteurs-libre/illustration-personnage-anime-garcon-mignon_23-2151199341.jpg'
+            : 'https://img.freepik.com/vecteurs-libre/illustration-personnage-anime-fille-mignonne_23-2151211110.jpg';
+      }
 
       // 4. Enregistrement dans la collection 'enfants'
       await nouvelEnfantRef.set({
         'childId': childId,
-        'classID': 'class_little_angels', // On l'affecte directement à cette classe
+        'classId': 'class_little_angels', // On l'affecte directement à cette classe
         'firstName': prenom,
         'lastName': nom,
         'gender': _selectedGender == 'Garçon' ? 'M' : 'F',
         'dateOfBirth': _birthDateController.text, // Idéalement à convertir en Timestamp plus tard
         'enrollmentDate': FieldValue.serverTimestamp(),
-        'avatarImageUrl': defaultImage,
+        'avatarImageUrl': imageUrl,
         'isActive': true,
         'parentIds': ['id_parent_temporaire'], // Lier au vrai système d'auth parent plus tard
         'emergencyContact': {'phone': _phoneController.text},
@@ -232,33 +264,38 @@ class _AdminAddChildScreenState extends State<AdminAddChildScreen> {
   }
 
   Widget _buildAvatarPicker() {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 128, height: 128,
-          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.add_a_photo_outlined, color: Color(0xFF546259), size: 34),
-              SizedBox(height: 8),
-              Text('Ajouter une photo', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFF546259))),
-            ],
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 128, height: 128,
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+            child: _selectedImageBytes != null
+                ? ClipOval(child: Image.memory(_selectedImageBytes!, fit: BoxFit.cover))
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.add_a_photo_outlined, color: Color(0xFF546259), size: 34),
+                      SizedBox(height: 8),
+                      Text('Ajouter une photo', style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w500, color: Color(0xFF546259))),
+                    ],
+                  ),
           ),
-        ),
-        Positioned(
-          bottom: 0, right: 0,
-          child: Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF006F1D), shape: BoxShape.circle, border: Border.all(color: const Color(0xFFF4FBF4), width: 4),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), offset: const Offset(0, 4), blurRadius: 6)],
+          Positioned(
+            bottom: 0, right: 0,
+            child: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF006F1D), shape: BoxShape.circle, border: Border.all(color: const Color(0xFFF4FBF4), width: 4),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), offset: const Offset(0, 4), blurRadius: 6)],
+              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 20),
             ),
-            child: const Icon(Icons.add, color: Colors.white, size: 20),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

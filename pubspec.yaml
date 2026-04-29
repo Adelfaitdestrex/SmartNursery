@@ -38,6 +38,7 @@ dependencies:
   firebase_core: ^3.13.0
   firebase_auth: ^5.5.2
   cloud_firestore: ^5.0.0
+  firebase_messaging: ^15.0.0
   http: ^1.1.0
   intl: ^0.20.2
   table_calendar: ^3.2.0
@@ -45,6 +46,9 @@ dependencies:
   image_picker: ^1.2.1
   cloud_functions: ^5.0.0
   just_audio: ^0.9.36
+  camera: ^0.12.0+1
+  shared_preferences: ^2.2.3
+  flutter_image_compress: ^2.4.0
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +82,9 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/future star/
+    - assets/explorateur/
+    - assets/little angels/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

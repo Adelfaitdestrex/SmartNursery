@@ -22,6 +22,8 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
   final TextEditingController _passwordController = TextEditingController();
   String? _profileImageUrl;
   File? _image;
+  File? _faceImage;
+  bool _hasFaceData = false;
   final ImagePicker _picker = ImagePicker();
   bool _isActive = true;
   bool _isLoading = false;
@@ -622,6 +624,31 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
     }
   }
 
+  Future<String?> _uploadFaceImage(File image, String userId) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('faces')
+          .child('parents')
+          .child(userId)
+          .child('$timestamp.jpg');
+      await storageRef.putFile(image);
+      final downloadUrl = await storageRef.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('Error uploading face image: $e');
+      return null;
+    }
+  }
+
+  String _generateDefaultAvatarUrl(String name, String email) {
+    // Utilise ui-avatars.com pour générer un avatar déterministe à partir du nom
+    // Le paramètre 'name' assure que le même nom produit toujours le même avatar
+    final encodedName = Uri.encodeComponent(name);
+    return 'https://ui-avatars.com/api/?name=$encodedName&background=0D8ABC&color=fff';
+  }
+
   Future<void> _handleCreateUser() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
@@ -631,19 +658,31 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le nom est obligatoire.'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+        const SnackBar(
+          content: Text('Le nom est obligatoire.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
     if (email.isEmpty || !email.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez entrer une adresse e-mail valide.'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+        const SnackBar(
+          content: Text('Veuillez entrer une adresse e-mail valide.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
     if (password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le mot de passe doit contenir au moins 6 caractères.'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+        const SnackBar(
+          content: Text('Le mot de passe doit contenir au moins 6 caractères.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -653,7 +692,11 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
       numberOfChildren = int.tryParse(_numberOfChildrenController.text.trim());
       if (numberOfChildren == null || numberOfChildren <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Veuillez entrer un nombre d'enfants valide."), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+          const SnackBar(
+            content: Text("Veuillez entrer un nombre d'enfants valide."),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         return;
       }
@@ -678,20 +721,45 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
       final newUid = result.data['uid'] as String;
       debugPrint('✅ Cloud Function success — uid: $newUid');
 
-      // ── Étape 2 : upload photo de profil (admin toujours connecté) ──────────
+      // ── Étape 2 : upload photo de profil et mise à jour des champs (admin toujours connecté) ──────────
+      final updateData = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (role == 'parent') {
+        updateData['childrenIds'] = []; // Initialise la liste des enfants
+      }
+
       if (_image != null) {
         _profileImageUrl = await _uploadImage(_image!, newUid);
         if (_profileImageUrl != null) {
-          await FirebaseFirestore.instance.collection('users').doc(newUid).update({
-            'profileImageUrl': _profileImageUrl,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+          updateData['profileImageUrl'] = _profileImageUrl;
         }
+      } else {
+        // Assigne un avatar par défaut si pas de photo
+        _profileImageUrl = _generateDefaultAvatarUrl(name, email);
+        updateData['profileImageUrl'] = _profileImageUrl;
       }
+
+      // Upload visage si disponible
+      if (_faceImage != null) {
+        await _uploadFaceImage(_faceImage!, newUid);
+        updateData['hasFaceData'] = true;
+        updateData['lastFaceRegisteredAt'] = FieldValue.serverTimestamp();
+      }
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(newUid)
+          .set(updateData, SetOptions(merge: true));
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Utilisateur créé : $email'), backgroundColor: const Color(0xFF006F1D), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text('Utilisateur créé : $email'),
+          backgroundColor: const Color(0xFF006F1D),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
 
       // ── Étape 3 : navigation ─────────────────────────────────────────────────
@@ -722,13 +790,21 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
         message = 'Session expirée. Veuillez vous reconnecter.';
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } catch (e) {
       debugPrint('❌ Unexpected error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : ${e.toString()}'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text('Erreur : ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -737,7 +813,6 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
 
   Widget _buildImagePicker() {
     return Column(
-
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
@@ -769,8 +844,122 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
                   ),
           ),
         ),
+        const SizedBox(height: 16),
+        // Section reconnaissance faciale
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _hasFaceData
+                ? const Color(0xFFECF6ED)
+                : const Color(0xFFF4FBF4),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _hasFaceData
+                  ? const Color(0xFF88C043)
+                  : const Color(0xFFD6E6DB),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _hasFaceData
+                        ? Icons.face_retouching_natural
+                        : Icons.face_retouching_off,
+                    color: _hasFaceData
+                        ? const Color(0xFF006F1D)
+                        : const Color(0xFF546259),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Reconnaissance faciale',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF28352E),
+                          ),
+                        ),
+                        Text(
+                          _hasFaceData
+                              ? 'Visage enregistré ✓'
+                              : 'Optionnel - Améliore l\'identification',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            color: _hasFaceData
+                                ? const Color(0xFF006F1D)
+                                : const Color(0xFF546259),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _pickFaceImage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _hasFaceData
+                        ? const Color(0xFF88C043)
+                        : const Color(0xFF006F1D),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(
+                    _hasFaceData ? Icons.check_circle : Icons.add_a_photo,
+                    size: 18,
+                  ),
+                  label: Text(
+                    _hasFaceData ? 'Visage enregistré' : 'Ajouter un visage',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              if (_faceImage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Photo de visage sélectionnée',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: const Color(0xFF006F1D),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _pickFaceImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _faceImage = File(pickedFile.path);
+        _hasFaceData = true;
+      });
+    }
   }
 
   Widget _buildSubmitButton() {

@@ -4,6 +4,7 @@ import 'package:smartnursery/features/A_propos_enfant/gallery.dart';
 import 'package:smartnursery/features/A_propos_enfant/details_des_activit%C3%A9es.dart';
 import 'package:smartnursery/features/A_propos_enfant/Profil_medical.dart';
 import 'package:smartnursery/features/A_propos_enfant/journal.dart';
+import 'package:smartnursery/features/A_propos_enfant/models/child_model.dart';
 
 // ---- Widget MenuButton réutilisable ----
 class MenuButton extends StatelessWidget {
@@ -57,7 +58,8 @@ class MenuButton extends StatelessWidget {
 }
 
 class ChildInfoScreen extends StatelessWidget {
-  const ChildInfoScreen({Key? key}) : super(key: key);
+  final ChildModel child;
+  const ChildInfoScreen({Key? key, required this.child}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -141,20 +143,12 @@ class ChildInfoScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const FoodJournalPage(),
+                            builder: (context) => FoodJournalPage(child: child),
                           ),
                         );
                       },
                     ),
-                    const SizedBox(height: 20),
-
-                    MenuButton(
-                      label: 'Sieste',
-                      color: const Color(0xFFE8C93A),
-                      onTap: () {
-                        // Navigator.pushNamed(context, '/sieste');
-                      },
-                    ),
+                    
                     const SizedBox(height: 20),
 
                     MenuButton(
@@ -164,7 +158,7 @@ class ChildInfoScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ActivityDetailsPage(),
+                            builder: (context) => ActivityDetailsPage(child: child),
                           ),
                         );
                       },
@@ -178,7 +172,7 @@ class ChildInfoScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ProfilMedical(),
+                            builder: (context) => ProfilMedical(child: child),
                           ),
                         );
                       },
@@ -191,7 +185,7 @@ class ChildInfoScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const CalendarPage(),
+                            builder: (context) => CalendarPage(childId: child.childId),
                           ),
                         );
                       },

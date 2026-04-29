@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({super.key});
+  final String childId;
+  const CalendarPage({super.key, required this.childId});
   @override
   State<CalendarPage> createState() => _CalendarPageState();
 }
@@ -10,6 +13,56 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedMonth = DateTime.now();
   bool showAttendance = true;
+
+  final Set<DateTime> _absentDays = {};
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription<QuerySnapshot>? _eventsSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToEvents();
+  }
+
+  @override
+  void dispose() {
+    _eventsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToEvents() {
+    _eventsSubscription = _firestore
+        .collection('enfants')
+        .doc(widget.childId)
+        .collection('events')
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      setState(() {
+        _absentDays.clear();
+        for (var doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final dateStr = data['date'] as String?;
+          if (dateStr == null) continue;
+          if (data['isAbsent'] == true) {
+            try {
+              final dateParts = dateStr.split('-');
+              if (dateParts.length == 3) {
+                final date = DateTime(
+                  int.parse(dateParts[0]),
+                  int.parse(dateParts[1]),
+                  int.parse(dateParts[2]),
+                );
+                _absentDays.add(date);
+              }
+            } catch (e) {
+              debugPrint('Error parsing date: $e');
+            }
+          }
+        }
+      });
+    });
+  }
 
   void _nextMonth() {
     setState(() {
@@ -184,17 +237,16 @@ class _CalendarPageState extends State<CalendarPage> {
                 if (index < startWeekday) return const SizedBox();
                 int day = index - startWeekday + 1;
 
+                DateTime currentDay = DateTime(
+                  _focusedMonth.year,
+                  _focusedMonth.month,
+                  day,
+                );
+
                 Color? circleColor;
-                if (day == 8 || day == 23) {
+                if (_absentDays.any((d) => d.year == currentDay.year && d.month == currentDay.month && d.day == currentDay.day)) {
                   circleColor = Colors.red;
-                } else if (day == 20) {
-                  circleColor = Colors.green;
-                } else if (DateTime(
-                      _focusedMonth.year,
-                      _focusedMonth.month,
-                      day,
-                    ).weekday ==
-                    DateTime.sunday) {
+                } else if (currentDay.weekday == DateTime.sunday) {
                   circleColor = Colors.blue;
                 }
 
@@ -235,18 +287,18 @@ class _CalendarPageState extends State<CalendarPage> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              children: const [
+              children: [
                 LegendBox(
                   color: Colors.red,
                   label: "Absent",
-                  count: 2,
+                  count: _absentDays.where((d) => d.year == _focusedMonth.year && d.month == _focusedMonth.month).length,
                   fullWidth: true,
                 ),
-                SizedBox(height: 12),
-                LegendBox(
+                const SizedBox(height: 12),
+                const LegendBox(
                   color: Colors.green,
                   label: "Festival & Holidays",
-                  count: 1,
+                  count: 0,
                   fullWidth: true,
                 ),
               ],

@@ -11,6 +11,9 @@ class SharedHeader extends StatelessWidget {
   final IconData rightIcon;
   final VoidCallback? onRightTap;
 
+  /// Widget personnalisé à afficher à droite (remplace l'icône rightIcon si fourni)
+  final Widget? rightWidget;
+
   const SharedHeader({
     super.key,
     this.title = 'Flux d\'actualité',
@@ -19,16 +22,17 @@ class SharedHeader extends StatelessWidget {
     this.onLeftTap,
     this.rightIcon = Icons.notifications_none,
     this.onRightTap,
+    this.rightWidget,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 100, // Reduced height
+      height: 100,
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20), // Slightly smaller radius
+          bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
         gradient: LinearGradient(
@@ -37,13 +41,13 @@ class SharedHeader extends StatelessWidget {
           colors: [AppColors.headerTop, AppColors.headerBottom],
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10), // Adjusted padding to prevent overflow
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 80, // Expanded width for a larger clickable area
+            width: 80,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -52,14 +56,16 @@ class SharedHeader extends StatelessWidget {
                       () => Navigator.push(
                             context,
                             PageRouteBuilder(
-                              pageBuilder: (context, animation1, animation2) => const SettingsPage(),
+                              pageBuilder: (context, animation1, animation2) =>
+                                  const SettingsPage(),
                               transitionDuration: Duration.zero,
                               reverseTransitionDuration: Duration.zero,
                             ),
                           ),
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0, vertical: 12.0),
                     child: leftWidget ??
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -77,7 +83,8 @@ class SharedHeader extends StatelessWidget {
                   const SizedBox(height: 5),
                   Text(
                     leftLabel!,
-                    style: const TextStyle(color: Colors.white, fontSize: 29 / 2),
+                    style:
+                        const TextStyle(color: Colors.white, fontSize: 29 / 2),
                   ),
                 ],
               ],
@@ -104,7 +111,8 @@ class SharedHeader extends StatelessWidget {
                           ),
                         ),
                 behavior: HitTestBehavior.opaque,
-                child: Icon(rightIcon, color: Colors.white, size: 30),
+                child: rightWidget ??
+                    Icon(rightIcon, color: Colors.white, size: 30),
               ),
             ),
           ),

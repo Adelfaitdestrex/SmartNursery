@@ -4,9 +4,9 @@ import 'package:smartnursery/features/messages/screens/chat.dart';
 import 'package:smartnursery/features/messages/services/message_service.dart';
 
 class SearchSection extends StatefulWidget {
-  final TextEditingController searchController;
+  final String searchQuery;
 
-  const SearchSection({super.key, required this.searchController});
+  const SearchSection({super.key, required this.searchQuery});
 
   @override
   State<SearchSection> createState() => _SearchSectionState();
@@ -18,7 +18,7 @@ class _SearchSectionState extends State<SearchSection> {
   bool _isSearching = false;
 
   Future<void> _performSearch() async {
-    final query = widget.searchController.text;
+    final query = widget.searchQuery;
     if (query.isEmpty) {
       setState(() {
         _searchResults = [];
@@ -47,7 +47,7 @@ class _SearchSectionState extends State<SearchSection> {
   @override
   void didUpdateWidget(SearchSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.searchController.text != oldWidget.searchController.text) {
+    if (widget.searchQuery != oldWidget.searchQuery) {
       _performSearch();
     }
   }
@@ -70,46 +70,6 @@ class _SearchSectionState extends State<SearchSection> {
   @override
   Widget build(BuildContext context) {
     return _buildSearchResults();
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFD6E6DB), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF28352E).withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: TextField(
-          controller: widget.searchController,
-          onChanged: (_) {},
-          decoration: const InputDecoration(
-            hintText: 'Rechercher un utilisateur...',
-            hintStyle: TextStyle(
-              fontFamily: 'Inter',
-              color: Color(0xFF9CAEA6),
-              fontSize: 14,
-            ),
-            icon: Icon(Icons.search, color: Color(0xFF006F1D)),
-            border: InputBorder.none,
-          ),
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14,
-            color: Color(0xFF28352E),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildSearchResults() {

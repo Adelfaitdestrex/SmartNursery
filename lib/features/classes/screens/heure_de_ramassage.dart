@@ -92,142 +92,144 @@ class _PickupTimePageState extends State<PickupTimePage> {
                         ),
                       ],
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // J'ai intégré le nom de l'enfant et la date ici pour garder ton design intact
-                        Text(
-                          "Ramassage de ${widget.childName} le $formattedDate",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // J'ai intégré le nom de l'enfant et la date ici pour garder ton design intact
+                          Text(
+                            "Ramassage de ${widget.childName} le $formattedDate",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "${selectedHour.toString().padLeft(2, '0')}:${selectedMinute.toString().padLeft(2, '0')}",
-                          style: const TextStyle(
-                            fontSize: 72,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0B511B),
+                          const SizedBox(height: 8),
+                          Text(
+                            "${selectedHour.toString().padLeft(2, '0')}:${selectedMinute.toString().padLeft(2, '0')}",
+                            style: const TextStyle(
+                              fontSize: 72,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0B511B),
+                            ),
                           ),
-                        ),
 
-                        // Décalage avant le picker
-                        const SizedBox(height: 40),
+                          // Décalage avant le picker
+                          const SizedBox(height: 40),
 
-                        // CupertinoPicker interactif
-                        SizedBox(
-                          height: 200,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: CupertinoPicker(
-                                  scrollController: FixedExtentScrollController(
-                                    initialItem: selectedHour,
-                                  ),
-                                  itemExtent: 40,
-                                  selectionOverlay:
-                                      const CupertinoPickerDefaultSelectionOverlay(
-                                        background: Colors
-                                            .transparent, // Retire le fond gris par défaut du picker
-                                      ),
-                                  onSelectedItemChanged: (value) {
-                                    setState(() {
-                                      selectedHour = value;
-                                    });
-                                  },
-                                  children: List.generate(24, (index) {
-                                    return Center(
-                                      child: Text(
-                                        index.toString().padLeft(2, '0'),
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF0B511B),
+                          // CupertinoPicker interactif
+                          SizedBox(
+                            height: 200,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    scrollController: FixedExtentScrollController(
+                                      initialItem: selectedHour,
+                                    ),
+                                    itemExtent: 40,
+                                    selectionOverlay:
+                                        const CupertinoPickerDefaultSelectionOverlay(
+                                          background: Colors
+                                              .transparent, // Retire le fond gris par défaut du picker
                                         ),
-                                      ),
-                                    );
-                                  }),
+                                    onSelectedItemChanged: (value) {
+                                      setState(() {
+                                        selectedHour = value;
+                                      });
+                                    },
+                                    children: List.generate(24, (index) {
+                                      return Center(
+                                        child: Text(
+                                          index.toString().padLeft(2, '0'),
+                                          style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0B511B),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
                                 ),
-                              ),
-                              const Text(
-                                ":",
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
+                                const Text(
+                                  ":",
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0B511B),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    scrollController: FixedExtentScrollController(
+                                      initialItem: selectedMinute,
+                                    ),
+                                    itemExtent: 40,
+                                    selectionOverlay:
+                                        const CupertinoPickerDefaultSelectionOverlay(
+                                          background: Colors.transparent,
+                                        ),
+                                    onSelectedItemChanged: (value) {
+                                      setState(() {
+                                        selectedMinute = value;
+                                      });
+                                    },
+                                    children: List.generate(60, (index) {
+                                      return Center(
+                                        child: Text(
+                                          index.toString().padLeft(2, '0'),
+                                          style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0B511B),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Status pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  size: 18,
                                   color: Color(0xFF0B511B),
                                 ),
-                              ),
-                              Expanded(
-                                child: CupertinoPicker(
-                                  scrollController: FixedExtentScrollController(
-                                    initialItem: selectedMinute,
+                                SizedBox(width: 8),
+                                Text(
+                                  "Horaire standard de la crèche",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF0B511B),
                                   ),
-                                  itemExtent: 40,
-                                  selectionOverlay:
-                                      const CupertinoPickerDefaultSelectionOverlay(
-                                        background: Colors.transparent,
-                                      ),
-                                  onSelectedItemChanged: (value) {
-                                    setState(() {
-                                      selectedMinute = value;
-                                    });
-                                  },
-                                  children: List.generate(60, (index) {
-                                    return Center(
-                                      child: Text(
-                                        index.toString().padLeft(2, '0'),
-                                        style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF0B511B),
-                                        ),
-                                      ),
-                                    );
-                                  }),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Status pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                size: 18,
-                                color: Color(0xFF0B511B),
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                "Horaire standard de la crèche",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF0B511B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

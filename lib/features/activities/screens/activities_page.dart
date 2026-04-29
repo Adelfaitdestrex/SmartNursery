@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
@@ -16,14 +19,58 @@ class ActivitiesPage extends StatefulWidget {
 class _ActivitiesPageState extends State<ActivitiesPage> {
   late DateTime _selectedDate;
   String _selectedFilter = 'Toutes';
+  String _userRole = '';
+  String _nurseryId = '';
+  List<ActivityModel> _activities = [];
+  StreamSubscription<QuerySnapshot>? _activitiesSub;
 
   @override
   void initState() {
     super.initState();
+    _fetchUserRole();
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dates = _getActivityDates();
-    _selectedDate = dates.contains(today) ? today : (dates.isNotEmpty ? dates.first : today);
+    _selectedDate = DateTime(now.year, now.month, now.day);
+  }
+
+  @override
+  void dispose() {
+    _activitiesSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenToActivities() {
+    if (_nurseryId.isEmpty) return;
+    _activitiesSub?.cancel();
+    _activitiesSub = FirebaseFirestore.instance
+        .collection('activities')
+        .where('nurseryId', isEqualTo: _nurseryId)
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      setState(() {
+        _activities = snap.docs
+            .map((doc) => ActivityModel.fromMap(doc.data() as Map<String, dynamic>, id: doc.id))
+            .toList();
+        _activities.sort((a, b) => b.date.compareTo(a.date));
+      });
+    });
+  }
+
+  Future<void> _fetchUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _userRole = (doc.data()?['role'] ?? '').toString().toLowerCase();
+          _nurseryId = doc.data()?['nurseryId'] as String? ?? '';
+        });
+        _listenToActivities();
+      }
+    }
   }
 
   String _getDayLabel(DateTime date) {
@@ -39,17 +86,21 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
   }
 
   List<DateTime> _getActivityDates() {
-    final dates = dummyActivities
+    final dates = _activities
         .map((a) => DateTime(a.date.year, a.date.month, a.date.day))
         .toSet()
         .toList();
+    if (dates.isEmpty) {
+      final now = DateTime.now();
+      return [DateTime(now.year, now.month, now.day)];
+    }
     dates.sort();
     return dates;
   }
 
   List<ActivityModel> get _filteredActivities {
     // Filtrer d'abord par date
-    var list = dummyActivities.where((a) {
+    var list = _activities.where((a) {
       final aDate = DateTime(a.date.year, a.date.month, a.date.day);
       return aDate == _selectedDate;
     }).toList();
@@ -77,17 +128,19 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final showAddActivity = _userRole == 'educateur' || _userRole == 'educator' || _userRole == 'admin' || _userRole == 'directeur';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4FBF4),
       bottomNavigationBar: const SafeArea(top: false, child: SharedBottomNavbar(currentIndex: 3)),
-      floatingActionButton: Container(
+      floatingActionButton: showAddActivity ? Container(
         margin: const EdgeInsets.only(bottom: 24, right: 8),
         child: FloatingActionButton(
           onPressed: _navigateToAddActivity,
           backgroundColor: const Color(0xFF006F1D),
           child: const Icon(Icons.add, color: Colors.white),
         ),
-      ),
+      ) : null,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -111,40 +164,42 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Ajouter nouvelle activité card
-                    GestureDetector(
-                      onTap: _navigateToAddActivity,
-                      child: Container(
-                        height: 113,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE5F8E5),
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x40000000),
-                              blurRadius: 4,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.widgets, size: 55, color: Colors.orange), // placeholder
-                            SizedBox(width: 12),
-                            Text(
-                              'Ajouter une nouvelle activité',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0x80000000),
+                    if (showAddActivity)
+                      GestureDetector(
+                        onTap: _navigateToAddActivity,
+                        child: Container(
+                          height: 113,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE5F8E5),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x40000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 4),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.widgets, size: 55, color: Colors.orange), // placeholder
+                              SizedBox(width: 12),
+                              Text(
+                                'Ajouter une nouvelle activité',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0x80000000),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 32),
+                    if (showAddActivity)
+                      const SizedBox(height: 32),
                     // Date Selector
                     SizedBox(
                       height: 79,
@@ -189,7 +244,12 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
                         ),
                       )
                     else
-                      ..._filteredActivities.map((activity) => ActivityCard(activity: activity)),
+                      ..._filteredActivities.map((activity) => ActivityCard(
+                            activity: activity,
+                            userRole: _userRole,
+                            userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                            nurseryId: _nurseryId,
+                          )),
                     const SizedBox(height: 60), // Bottom padding
                   ],
                 ),

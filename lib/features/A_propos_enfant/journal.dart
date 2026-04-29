@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
-import 'package:smartnursery/features/A_propos_enfant/redirection_info_enfant.dart';
+import 'package:smartnursery/features/A_propos_enfant/models/child_model.dart';
 
 class FoodJournalPage extends StatelessWidget {
-  const FoodJournalPage({super.key});
+  final ChildModel child;
+  const FoodJournalPage({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +32,7 @@ class FoodJournalPage extends StatelessWidget {
               ),
               leftLabel: null,
               onLeftTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ChildInfoScreen()),
-                );
+                Navigator.pop(context);
               },
             ),
 
@@ -63,7 +62,51 @@ class FoodJournalPage extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // بطاقة الوجبة الرئيسية
-                  _buildMealCard(),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('enfants')
+                        .doc(child.childId)
+                        .collection('meal_requests')
+                        .where('date', isEqualTo: "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}")
+                        .snapshots(),
+                    builder: (context, requestSnapshot) {
+                      if (requestSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      
+                      final docs = requestSnapshot.data?.docs ?? [];
+                      if (docs.isEmpty) {
+                        return _buildEmptyMealCard(child.firstName);
+                      }
+                      
+                      final data = docs.first.data() as Map<String, dynamic>;
+                      final mealId = data['mealId'] as String?;
+                      final mealNameFallback = data['mealName'] ?? 'Repas sélectionné';
+                      
+                      if (mealId == null) {
+                         return _buildMealCard(child.firstName, mealNameFallback, null, null);
+                      }
+
+                      return FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance.collection('meals').doc(mealId).get(),
+                        builder: (context, mealSnapshot) {
+                          if (mealSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          
+                          if (mealSnapshot.hasData && mealSnapshot.data!.exists) {
+                            final mealData = mealSnapshot.data!.data() as Map<String, dynamic>;
+                            final name = mealData['name'] ?? mealNameFallback;
+                            final imageUrl = mealData['imageUrl'] as String?;
+                            final description = mealData['description'] as String?;
+                            return _buildMealCard(child.firstName, name, imageUrl, description);
+                          }
+                          
+                          return _buildMealCard(child.firstName, mealNameFallback, null, null);
+                        },
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 20),
 
@@ -120,7 +163,7 @@ class FoodJournalPage extends StatelessWidget {
 
   // بطاقة الوجبة
 
-  Widget _buildMealCard() {
+  Widget _buildMealCard(String childName, String mealName, String? imageUrl, String? description) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -132,34 +175,36 @@ class FoodJournalPage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Image.network(
-            'https://via.placeholder.com/200x150',
-            height: 150,
-          ), // استبدلها بصورة كرتونية
-          const SizedBox(height: 15),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD4E1A1),
-                borderRadius: BorderRadius.circular(10),
+          if (imageUrl != null && imageUrl.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.network(
+                imageUrl,
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
               ),
-              child: const Text(
-                "BIOLOGIQUE",
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
+            )
+          else
+            Image.network(
+              'https://via.placeholder.com/200x150',
+              height: 150,
             ),
-          ),
+          const SizedBox(height: 15),
           const SizedBox(height: 10),
-          const Text(
-            "Leo a apprécié une portion de purée de patates douces biologiques et quelques tranches de pommes croquantes aujourd'hui.",
-            style: TextStyle(color: Colors.grey, height: 1.4),
+          Text(
+            "$childName va manger : $mealName aujourd'hui.",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            textAlign: TextAlign.center,
           ),
+          if (description != null && description.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              description,
+              style: const TextStyle(color: Colors.grey, height: 1.4),
+              textAlign: TextAlign.center,
+            ),
+          ],
           const SizedBox(height: 20),
           _buildMealInfoRow("CONSOMMATION", "180 ml", null),
           const SizedBox(height: 10),
@@ -169,6 +214,30 @@ class FoodJournalPage extends StatelessWidget {
             Icons.sentiment_very_satisfied,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyMealCard(String childName) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20),
+        ],
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(
+            "Aucun repas n'a été réservé pour $childName aujourd'hui.",
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+        ),
       ),
     );
   }

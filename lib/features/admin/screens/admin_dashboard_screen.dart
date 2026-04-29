@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartnursery/features/notifiacation/notification_screen.dart';
+import 'package:smartnursery/shared/widgets/admin_profile_avatar.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -79,16 +80,10 @@ class AdminDashboardScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: NetworkImage('https://i.pravatar.cc/150?img=47'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              const AdminProfileAvatar(
+                size: 40,
+                borderColor: Color(0xFF91F78E),
+                borderWidth: 2,
               ),
               const SizedBox(width: 16),
               const Text(

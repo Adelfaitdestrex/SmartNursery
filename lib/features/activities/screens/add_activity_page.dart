@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
 import 'package:smartnursery/features/activities/models/activity_model.dart';
 import 'package:smartnursery/features/activities/widgets/activity_card.dart';
+import 'package:smartnursery/features/notifiacation/services/notification_service.dart';
 
 class AddActivityPage extends StatefulWidget {
   const AddActivityPage({super.key});
@@ -23,7 +26,11 @@ class _AddActivityPageState extends State<AddActivityPage> {
           children: [
             SharedHeader(
               title: 'Nouvelle Activité',
-              leftWidget: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
+              leftWidget: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+                size: 32,
+              ),
               leftLabel: null,
               onLeftTap: () => Navigator.pop(context),
             ),
@@ -37,7 +44,11 @@ class _AddActivityPageState extends State<AddActivityPage> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(40),
                   boxShadow: const [
-                    BoxShadow(color: Color(0x20000000), offset: Offset(0, 2), blurRadius: 4),
+                    BoxShadow(
+                      color: Color(0x20000000),
+                      offset: Offset(0, 2),
+                      blurRadius: 4,
+                    ),
                   ],
                 ),
                 child: Row(
@@ -50,7 +61,9 @@ class _AddActivityPageState extends State<AddActivityPage> {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: _selectedTabIndex == 0 ? const _PreexistingActivitiesView() : const _CustomActivityForm(),
+              child: _selectedTabIndex == 0
+                  ? const _PreexistingActivitiesView()
+                  : const _CustomActivityForm(),
             ),
           ],
         ),
@@ -87,7 +100,7 @@ class _PreexistingActivitiesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final terminies = dummyActivities.where((a) => a.status == ActivityStatus.terminee).toList();
+    final templates = dummyActivities.toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -97,32 +110,43 @@ class _PreexistingActivitiesView extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(left: 8, bottom: 16),
             child: Text(
-              'Sélectionnez une activité terminée à relancer',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF28352E)),
+              'Sélectionnez un modèle d\'activité à relancer',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF28352E),
+              ),
             ),
           ),
-          if (terminies.isEmpty)
+          if (templates.isEmpty)
             const Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text("Aucune activité terminée pour le moment."),
+              child: Text("Aucun modèle d'activité pour le moment."),
             )
           else
-            ...terminies.map((activity) => GestureDetector(
-                  onTap: () async {
-                    final result = await showModalBottomSheet<bool>(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => _RelaunchSheet(activity: activity),
-                    );
-                    if (result == true && context.mounted) {
-                      Navigator.pop(context, true);
-                    }
-                  },
-                  child: AbsorbPointer(
-                    child: ActivityCard(activity: activity),
+            ...templates.map(
+              (activity) => GestureDetector(
+                onTap: () async {
+                  final result = await showModalBottomSheet<bool>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => _RelaunchSheet(activity: activity),
+                  );
+                  if (result == true && context.mounted) {
+                    Navigator.pop(context, true);
+                  }
+                },
+                child: AbsorbPointer(
+                  child: ActivityCard(
+                    activity: activity,
+                    userRole: '',
+                    userId: '',
+                    nurseryId: '',
                   ),
-                )),
+                ),
+              ),
+            ),
           const SizedBox(height: 32),
         ],
       ),
@@ -142,7 +166,7 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
   DateTime? _selectedDate;
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
-  
+
   final _titleController = TextEditingController();
   final _authorController = TextEditingController();
   final _descController = TextEditingController();
@@ -172,7 +196,9 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
   Future<void> _selectTime(bool isStart) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: isStart ? (_startTime ?? TimeOfDay.now()) : (_endTime ?? TimeOfDay.now()),
+      initialTime: isStart
+          ? (_startTime ?? TimeOfDay.now())
+          : (_endTime ?? TimeOfDay.now()),
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -192,7 +218,7 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
       });
     }
   }
-  
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -212,25 +238,62 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
           children: [
             const Text(
               'Créer une nouvelle activité',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF28352E)),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF28352E),
+              ),
             ),
             const SizedBox(height: 24),
-            _buildInputField('Titre de l\'activité', Icons.title, controller: _titleController),
+            _buildInputField(
+              'Titre de l\'activité',
+              Icons.title,
+              controller: _titleController,
+            ),
             const SizedBox(height: 16),
             _buildDateTimePicker(),
             const SizedBox(height: 16),
-            _buildInputField('Éducateur(rice) assigné(e)', Icons.person, controller: _authorController),
+            _buildInputField(
+              'Éducateur(rice) assigné(e)',
+              Icons.person,
+              controller: _authorController,
+            ),
             const SizedBox(height: 16),
-            _buildInputField('Description', Icons.description, maxLines: 3, controller: _descController),
+            _buildInputField(
+              'Description',
+              Icons.description,
+              maxLines: 3,
+              controller: _descController,
+            ),
             if (_selectedDate == null || _startTime == null || _endTime == null)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('Veuillez sélectionner la date et les horaires.', style: TextStyle(color: Colors.red, fontSize: 12)),
+                child: Text(
+                  'Veuillez sélectionner la date et les horaires.',
+                  style: TextStyle(color: Colors.red, fontSize: 12),
+                ),
               ),
             const SizedBox(height: 32),
             GestureDetector(
-              onTap: () {
-                if (_formKey.currentState!.validate() && _selectedDate != null && _startTime != null && _endTime != null) {
+              onTap: () async {
+                if (_formKey.currentState!.validate() &&
+                    _selectedDate != null &&
+                    _startTime != null &&
+                    _endTime != null) {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user == null) return;
+
+                  final userDoc = await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user.uid)
+                      .get();
+                  final nurseryId =
+                      userDoc.data()?['nurseryId'] as String? ?? '';
+                  final displayName =
+                      userDoc.data()?['displayName'] as String? ?? 'Unknown';
+                  final profileImage =
+                      userDoc.data()?['profileImageUrl'] as String?;
+
                   final newActivity = ActivityModel(
                     title: _titleController.text,
                     date: _selectedDate!,
@@ -239,13 +302,47 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
                     description: _descController.text,
                     author: _authorController.text,
                     themeKey: 'green',
+                    nurseryId: nurseryId,
+                    participants: [],
                   );
-                  dummyActivities.add(newActivity);
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Activité créée avec succès !')),
-                  );
-                  Navigator.pop(context, true);
+
+                  // Save to Firestore
+                  final docRef = FirebaseFirestore.instance
+                      .collection('activities')
+                      .doc();
+                  await docRef.set(newActivity.toMap());
+
+                  // Créer une notification pour les autres utilisateurs
+                  if (nurseryId.isNotEmpty) {
+                    try {
+                      await NotificationService().createNotification(
+                        nurseryId: nurseryId,
+                        sourceUserId: user.uid,
+                        sourceUserName: displayName,
+                        type: 'activity',
+                        title: 'Nouvelle activité: ${_titleController.text}',
+                        message: _descController.text.length > 50
+                            ? _descController.text.substring(0, 50) + '...'
+                            : _descController.text,
+                        sourceUserProfileImage: profileImage,
+                        relatedDocumentId: docRef.id,
+                        additionalData: {'activityId': docRef.id},
+                      );
+                    } catch (e) {
+                      debugPrint(
+                        '⚠️ Erreur lors de la création de la notification: $e',
+                      );
+                    }
+                  }
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Activité créée avec succès !'),
+                      ),
+                    );
+                    Navigator.pop(context, true);
+                  }
                 } else {
                   setState(() {}); // refresh to show error text
                 }
@@ -255,12 +352,22 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF89B832),
                   borderRadius: BorderRadius.circular(30),
-                  boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x40000000),
+                      offset: Offset(0, 4),
+                      blurRadius: 4,
+                    ),
+                  ],
                 ),
                 child: const Center(
                   child: Text(
                     'Enregistrer l\'activité',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -283,19 +390,29 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 8, offset: Offset(0, 2))],
-              border: _selectedDate == null ? Border.all(color: Colors.red.shade200) : null,
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x10000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+              border: _selectedDate == null
+                  ? Border.all(color: Colors.red.shade200)
+                  : null,
             ),
             child: Row(
               children: [
                 const Icon(Icons.calendar_today, color: Color(0xFF006F1D)),
                 const SizedBox(width: 12),
                 Text(
-                  _selectedDate == null 
-                      ? 'Sélectionner une date' 
+                  _selectedDate == null
+                      ? 'Sélectionner une date'
                       : '${_selectedDate!.day.toString().padLeft(2, '0')}/${_selectedDate!.month.toString().padLeft(2, '0')}/${_selectedDate!.year}',
                   style: TextStyle(
-                    color: _selectedDate == null ? Colors.black38 : Colors.black87,
+                    color: _selectedDate == null
+                        ? Colors.black38
+                        : Colors.black87,
                     fontSize: 16,
                   ),
                 ),
@@ -310,21 +427,36 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
               child: GestureDetector(
                 onTap: () => _selectTime(true),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 8, offset: Offset(0, 2))],
-                    border: _startTime == null ? Border.all(color: Colors.red.shade200) : null,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x10000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                    border: _startTime == null
+                        ? Border.all(color: Colors.red.shade200)
+                        : null,
                   ),
                   child: Row(
                     children: [
                       const Icon(Icons.access_time, color: Color(0xFF006F1D)),
                       const SizedBox(width: 12),
                       Text(
-                        _startTime == null ? 'Début' : _startTime!.format(context),
+                        _startTime == null
+                            ? 'Début'
+                            : _startTime!.format(context),
                         style: TextStyle(
-                          color: _startTime == null ? Colors.black38 : Colors.black87,
+                          color: _startTime == null
+                              ? Colors.black38
+                              : Colors.black87,
                           fontSize: 16,
                         ),
                       ),
@@ -338,12 +470,23 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
               child: GestureDetector(
                 onTap: () => _selectTime(false),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 8, offset: Offset(0, 2))],
-                    border: _endTime == null ? Border.all(color: Colors.red.shade200) : null,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x10000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                    border: _endTime == null
+                        ? Border.all(color: Colors.red.shade200)
+                        : null,
                   ),
                   child: Row(
                     children: [
@@ -352,7 +495,9 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
                       Text(
                         _endTime == null ? 'Fin' : _endTime!.format(context),
                         style: TextStyle(
-                          color: _endTime == null ? Colors.black38 : Colors.black87,
+                          color: _endTime == null
+                              ? Colors.black38
+                              : Colors.black87,
                           fontSize: 16,
                         ),
                       ),
@@ -367,12 +512,23 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
     );
   }
 
-  Widget _buildInputField(String hint, IconData icon, {int maxLines = 1, TextEditingController? controller}) {
+  Widget _buildInputField(
+    String hint,
+    IconData icon, {
+    int maxLines = 1,
+    TextEditingController? controller,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: TextFormField(
         controller: controller,
@@ -380,9 +536,17 @@ class _CustomActivityFormState extends State<_CustomActivityForm> {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.black38),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-          prefixIcon: maxLines == 1 ? Icon(icon, color: const Color(0xFF006F1D)) : null,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+          prefixIcon: maxLines == 1
+              ? Icon(icon, color: const Color(0xFF006F1D))
+              : null,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
@@ -473,7 +637,9 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         decoration: const BoxDecoration(
           color: Color(0xFFF4FBF4),
@@ -487,7 +653,8 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
             // Grip
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2),
@@ -499,18 +666,28 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
             Text(
               widget.activity.title,
               style: const TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF28352E),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF28352E),
               ),
             ),
             const SizedBox(height: 24),
             // Professeur
-            const Text('Professeur / Éducateur(rice)', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF28352E))),
+            const Text(
+              'Professeur / Éducateur(rice)',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF28352E),
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 6)],
+                boxShadow: const [
+                  BoxShadow(color: Color(0x10000000), blurRadius: 6),
+                ],
               ),
               child: TextField(
                 controller: _authorController,
@@ -522,37 +699,66 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
                     borderRadius: BorderRadius.all(Radius.circular(16)),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 24),
             // Date
-            const Text('Date', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF28352E))),
+            const Text(
+              'Date',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF28352E),
+              ),
+            ),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: _selectDate,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 6)],
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x10000000), blurRadius: 6),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today, color: Color(0xFF006F1D), size: 20),
+                    const Icon(
+                      Icons.calendar_today,
+                      color: Color(0xFF006F1D),
+                      size: 20,
+                    ),
                     const SizedBox(width: 12),
-                    Text(_fmtDate(_selectedDate),
-                        style: const TextStyle(fontSize: 16, color: Colors.black87)),
+                    Text(
+                      _fmtDate(_selectedDate),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
             // Heure début / fin
-            const Text('Horaires', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF28352E))),
+            const Text(
+              'Horaires',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF28352E),
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -560,22 +766,42 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
                   child: GestureDetector(
                     onTap: () => _selectTime(true),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 6)],
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x10000000), blurRadius: 6),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.access_time, color: Color(0xFF006F1D), size: 20),
+                          const Icon(
+                            Icons.access_time,
+                            color: Color(0xFF006F1D),
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Début', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                              Text(_fmtTime(_startTime),
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                              const Text(
+                                'Début',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              Text(
+                                _fmtTime(_startTime),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -588,22 +814,42 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
                   child: GestureDetector(
                     onTap: () => _selectTime(false),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 6)],
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x10000000), blurRadius: 6),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.access_time_filled, color: Color(0xFF006F1D), size: 20),
+                          const Icon(
+                            Icons.access_time_filled,
+                            color: Color(0xFF006F1D),
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Fin', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                              Text(_fmtTime(_endTime),
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                              const Text(
+                                'Fin',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              Text(
+                                _fmtTime(_endTime),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -616,7 +862,16 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
             const SizedBox(height: 28),
             // Bouton confirmer
             GestureDetector(
-              onTap: () {
+              onTap: () async {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) return;
+
+                final userDoc = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .get();
+                final nurseryId = userDoc.data()?['nurseryId'] as String? ?? '';
+
                 final newActivity = ActivityModel(
                   title: widget.activity.title,
                   date: _selectedDate,
@@ -627,24 +882,45 @@ class _RelaunchSheetState extends State<_RelaunchSheet> {
                       ? widget.activity.author
                       : _authorController.text.trim(),
                   themeKey: widget.activity.themeKey,
+                  nurseryId: nurseryId,
+                  participants: [],
                 );
-                dummyActivities.add(newActivity);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('"${widget.activity.title}" relancée !')),
-                );
-                Navigator.pop(context, true);
+
+                final docRef = FirebaseFirestore.instance
+                    .collection('activities')
+                    .doc();
+                await docRef.set(newActivity.toMap());
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('"${widget.activity.title}" relancée !'),
+                    ),
+                  );
+                  Navigator.pop(context, true);
+                }
               },
               child: Container(
                 height: 54,
                 decoration: BoxDecoration(
                   color: const Color(0xFF006F1D),
                   borderRadius: BorderRadius.circular(30),
-                  boxShadow: const [BoxShadow(color: Color(0x40000000), offset: Offset(0, 4), blurRadius: 4)],
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x40000000),
+                      offset: Offset(0, 4),
+                      blurRadius: 4,
+                    ),
+                  ],
                 ),
                 child: const Center(
                   child: Text(
                     'Confirmer le relancement',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

@@ -17,6 +17,7 @@ class ChildModel {
   final DateTime enrollmentDate;
   final bool isActive;
   final String nurseryId;
+  final String? avatarImageUrl;
 
   ChildModel({
     required this.childId,
@@ -35,6 +36,7 @@ class ChildModel {
     required this.enrollmentDate,
     this.isActive = true,
     required this.nurseryId,
+    this.avatarImageUrl,
   });
 
   // Convert to Firestore map
@@ -56,6 +58,7 @@ class ChildModel {
       'enrollmentDate': Timestamp.fromDate(enrollmentDate),
       'isActive': isActive,
       'nurseryId': nurseryId,
+      if (avatarImageUrl != null) 'avatarImageUrl': avatarImageUrl,
     };
   }
 
@@ -80,6 +83,7 @@ class ChildModel {
           (map['enrollmentDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isActive: map['isActive'] ?? true,
       nurseryId: map['nurseryId'] ?? '',
+      avatarImageUrl: map['avatarImageUrl'],
     );
   }
 
@@ -101,6 +105,7 @@ class ChildModel {
     DateTime? enrollmentDate,
     bool? isActive,
     String? nurseryId,
+    String? avatarImageUrl,
   }) {
     return ChildModel(
       childId: childId ?? this.childId,
@@ -119,6 +124,7 @@ class ChildModel {
       enrollmentDate: enrollmentDate ?? this.enrollmentDate,
       isActive: isActive ?? this.isActive,
       nurseryId: nurseryId ?? this.nurseryId,
+      avatarImageUrl: avatarImageUrl ?? this.avatarImageUrl,
     );
   }
 }

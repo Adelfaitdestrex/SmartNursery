@@ -4,6 +4,9 @@ import 'package:smartnursery/features/A_propos_enfant/models/child_model.dart';
 import 'package:smartnursery/features/A_propos_enfant/services/child_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:firebase_storage/firebase_storage.dart';
 
 class AddChildrenFlowPage extends StatefulWidget {
   final String parentId;
@@ -26,9 +29,24 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
   late List<Map<String, dynamic>> _childrenData;
   late List<TextEditingController> _firstNameControllers;
   late List<TextEditingController> _lastNameControllers;
+  late List<TextEditingController> _allergiesControllers;
+  late List<TextEditingController> _maladiesControllers;
   final ChildService _childService = ChildService();
   List<Map<String, dynamic>> _availableClasses = [];
   bool _isLoading = false;
+
+  final List<String> _predefinedAvatars = [
+    'assets/future star/Capture d\'écran 2026-04-27 010831.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010835.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010840.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010847.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010851.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010858.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010903.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010908.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010914.png',
+    'assets/future star/Capture d\'écran 2026-04-27 010920.png',
+  ];
 
   @override
   void initState() {
@@ -51,6 +69,7 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
         'gender': 'Garçon', // valeur par défaut
         'dateOfBirth': DateTime.now().subtract(const Duration(days: 365 * 3)),
         'classId': null,
+        'selectedAvatarAsset': null,
       },
     );
     _firstNameControllers = List.generate(
@@ -58,6 +77,14 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
       (_) => TextEditingController(),
     );
     _lastNameControllers = List.generate(
+      widget.numberOfChildren,
+      (_) => TextEditingController(),
+    );
+    _allergiesControllers = List.generate(
+      widget.numberOfChildren,
+      (_) => TextEditingController(),
+    );
+    _maladiesControllers = List.generate(
       widget.numberOfChildren,
       (_) => TextEditingController(),
     );
@@ -97,6 +124,12 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
     for (var controller in _lastNameControllers) {
       controller.dispose();
     }
+    for (var controller in _allergiesControllers) {
+      controller.dispose();
+    }
+    for (var controller in _maladiesControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -118,6 +151,27 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
       final childRef = FirebaseFirestore.instance.collection('enfants').doc();
       final childId = childRef.id;
 
+      String? avatarUrlToSave;
+      final selectedAvatar = _childrenData[index]['selectedAvatarAsset'];
+      if (selectedAvatar != null) {
+        avatarUrlToSave = selectedAvatar; // Save local asset path directly
+      } else {
+        avatarUrlToSave = _childrenData[index]['gender'] == 'Garçon'
+            ? 'https://img.freepik.com/vecteurs-libre/illustration-personnage-anime-garcon-mignon_23-2151199341.jpg'
+            : 'https://img.freepik.com/vecteurs-libre/illustration-personnage-anime-fille-mignonne_23-2151211110.jpg';
+      }
+
+      final allergiesText = _allergiesControllers[index].text.trim();
+      final maladiesText = _maladiesControllers[index].text.trim();
+      
+      final allergiesList = allergiesText.isNotEmpty 
+          ? allergiesText.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() 
+          : <String>[];
+          
+      final medicinalInfo = maladiesText.isNotEmpty 
+          ? {'maladies': maladiesText.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()} 
+          : null;
+
       final child = ChildModel(
         childId: childId,
         firstName: _firstNameControllers[index].text,
@@ -126,8 +180,11 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
         dateOfBirth: _childrenData[index]['dateOfBirth'],
         classId: _childrenData[index]['classId'],
         parentIds: [widget.parentId],
+        allergies: allergiesList,
+        medicinalInfo: medicinalInfo,
         enrollmentDate: DateTime.now(),
         nurseryId: widget.nurseryId,
+        avatarImageUrl: avatarUrlToSave,
       );
 
       debugPrint('💾 Saving child ${index + 1}/${widget.numberOfChildren}...');
@@ -303,11 +360,27 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
                   icon: Icons.person_outline,
                 ),
                 const SizedBox(height: 16),
+                _buildPredefinedAvatarSelector(index),
+                const SizedBox(height: 16),
                 _buildGenderSelector(index),
                 const SizedBox(height: 16),
                 _buildDateOfBirthField(index),
                 const SizedBox(height: 16),
                 _buildClassSelector(index),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  label: 'Maladies (séparées par une virgule)',
+                  hint: 'Ex: Asthme, Diabète',
+                  controller: _maladiesControllers[index],
+                  icon: Icons.local_hospital_outlined,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  label: 'Allergies (séparées par une virgule)',
+                  hint: 'Ex: Arachides, Pénicilline',
+                  controller: _allergiesControllers[index],
+                  icon: Icons.warning_amber_rounded,
+                ),
                 const SizedBox(height: 32),
                 // Boutons navigation
                 Row(
@@ -378,6 +451,61 @@ class _AddChildrenFlowPageState extends State<AddChildrenFlowPage> {
   }
 
   // ── Widgets auxiliaires ────────────────────────────────────────────────────
+
+  Widget _buildPredefinedAvatarSelector(int index) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Choisir un avatar (optionnel)',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF546259),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 70,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _predefinedAvatars.length,
+            itemBuilder: (context, i) {
+              final assetPath = _predefinedAvatars[i];
+              final isSelected = _childrenData[index]['selectedAvatarAsset'] == assetPath;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isSelected) {
+                      _childrenData[index]['selectedAvatarAsset'] = null;
+                    } else {
+                      _childrenData[index]['selectedAvatarAsset'] = assetPath;
+                    }
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF006F1D) : Colors.transparent,
+                      width: 3,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 30,
+                    backgroundImage: AssetImage(assetPath),
+                    backgroundColor: const Color(0xFFF4FBF4),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildTextField({
     required String label,

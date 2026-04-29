@@ -111,12 +111,15 @@ class ChildService {
       return _firestore
           .collection('enfants')
           .where('parentIds', arrayContains: parentId)
-          .orderBy('firstName')
           .snapshots()
           .map(
-            (snapshot) => snapshot.docs
-                .map((doc) => ChildModel.fromMap(doc.data(), doc.id))
-                .toList(),
+            (snapshot) {
+              final children = snapshot.docs
+                  .map((doc) => ChildModel.fromMap(doc.data(), doc.id))
+                  .toList();
+              children.sort((a, b) => a.firstName.compareTo(b.firstName));
+              return children;
+            },
           );
     } catch (e) {
       debugPrint('❌ Error fetching children by parent: $e');

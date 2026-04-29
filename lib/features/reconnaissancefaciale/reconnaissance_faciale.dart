@@ -1,7 +1,15 @@
 ﻿import 'package:flutter/material.dart';
 
 class FaceRecognitionPage extends StatelessWidget {
-  const FaceRecognitionPage({super.key});
+  final String childName;
+  final String confidenceLabel;
+
+  const FaceRecognitionPage({
+    super.key,
+    this.childName = 'Léo Bernard',
+    this.confidenceLabel =
+        'Correspondance trouvée dans la base de données (92%)',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,112 +50,92 @@ class FaceRecognitionPage extends StatelessWidget {
 
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // البطاقة المركزية المتدرجة
+                  // أيقونة الوجه الدائرية
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(30),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          primaryGreen.withOpacity(0.2),
-                          primaryGreen.withOpacity(0.05),
-                        ],
-                      ),
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: primaryGreen,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 20,
+                          spreadRadius: 5,
+                        ),
+                      ],
                     ),
-                    child: Column(
+                    child: const Icon(
+                      Icons.face,
+                      size: 60,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  const Text(
+                    "Visage reconnu",
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    confidenceLabel,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // بطاقة التعريف الشخصية الصغيرة
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // أيقونة الوجه الدائرية
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: const BoxDecoration(
-                            color: primaryGreen,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 20,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.face,
-                            size: 60,
-                            color: Colors.white,
+                        const CircleAvatar(
+                          radius: 20,
+                          backgroundImage: NetworkImage(
+                            'https://via.placeholder.com/150',
                           ),
                         ),
-                        const SizedBox(height: 25),
-                        const Text(
-                          "Visage reconnu",
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: darkText,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          "Correspondance trouvée dans la base de données (92%)",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.black54, fontSize: 13),
-                        ),
-                        const SizedBox(
-                          height: 30,
-                        ), // بطاقة التعريف الشخصية الصغيرة
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 15,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(30),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "IDENTIFIÉ COMME",
+                              style: TextStyle(
+                                color: primaryGreen,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const CircleAvatar(
-                                radius: 20,
-                                backgroundImage: NetworkImage(
-                                  'https://via.placeholder.com/150',
-                                ), // ضع صورة الطفل هنا
+                            ),
+                            Text(
+                              childName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
                               ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    "IDENTIFIÉ COMME",
-                                    style: TextStyle(
-                                      color: primaryGreen,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Léo Bernard",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -184,14 +172,16 @@ class FaceRecognitionPage extends StatelessWidget {
 
                   const SizedBox(height: 15),
                   const Text(
-                    "Le système a correctement identifié l'enfant. Vous pouvez maintenant procéder à la confirmation de l'arrivée.",
+                    "Le système a correctement identifié la personne . Vous pouvez maintenant procéder à la confirmation de l'arrivée.",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.black45, fontSize: 14),
                   ),
                 ],
               ),
             ),
-          ), // شريط الأزرار السفلي
+          ),
+
+          // شريط الأزرار السفلي
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             decoration: const BoxDecoration(
@@ -225,7 +215,6 @@ class FaceRecognitionPage extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      // Confirmation de l'arrivée effectuée
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Arrivée confirmée !'),

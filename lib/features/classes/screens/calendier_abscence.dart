@@ -1,11 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:smartnursery/features/classes/screens/time_selection.dart';
-import 'package:smartnursery/features/classes/screens/heure_de_ramassage.dart'; // N'oublie pas d'importer la nouvelle page !
+import 'package:smartnursery/features/classes/screens/heure_de_ramassage.dart';
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({super.key});
+  final String childId;
+  final String childName;
+
+  const CalendarPage({
+    super.key,
+    required this.childId,
+    required this.childName,
+  });
 
   @override
   State<CalendarPage> createState() => _CalendarPageState();
@@ -14,13 +23,72 @@ class CalendarPage extends StatefulWidget {
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  final String _selectedChild = "Léo";
 
   // 1. Liste des jours marqués comme absents
   final Set<DateTime> _absentDays = {};
 
   // NOUVEAU : Dictionnaire pour associer une date à une heure de ramassage
   final Map<DateTime, TimeOfDay> _pickupTimes = {};
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription<QuerySnapshot>? _eventsSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToEvents();
+  }
+
+  @override
+  void dispose() {
+    _eventsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToEvents() {
+    _eventsSubscription = _firestore
+        .collection('enfants')
+        .doc(widget.childId)
+        .collection('events')
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      setState(() {
+        _absentDays.clear();
+        _pickupTimes.clear();
+        for (var doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final dateStr = data['date'] as String?;
+          if (dateStr == null) continue;
+          try {
+            final dateParts = dateStr.split('-');
+            if (dateParts.length == 3) {
+              final date = DateTime(
+                int.parse(dateParts[0]),
+                int.parse(dateParts[1]),
+                int.parse(dateParts[2]),
+              );
+              if (data['isAbsent'] == true) {
+                _absentDays.add(date);
+              }
+              final pickupTimeStr = data['pickupTime'] as String?;
+              if (pickupTimeStr != null && pickupTimeStr.isNotEmpty) {
+                final timeParts = pickupTimeStr.split(':');
+                if (timeParts.length == 2) {
+                  _pickupTimes[date] = TimeOfDay(
+                    hour: int.parse(timeParts[0]),
+                    minute: int.parse(timeParts[1]),
+                  );
+                }
+              }
+            }
+          } catch (e) {
+            debugPrint('Error parsing event date/time: $e');
+          }
+        }
+      });
+    });
+  }
 
   void _goToPreviousMonth() => setState(
     () => _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1, 1),
@@ -34,47 +102,63 @@ class _CalendarPageState extends State<CalendarPage> {
     return name[0].toUpperCase() + name.substring(1);
   }
 
-  // Fonction existante pour l'absence
+  // Fonction pour l'absence
   void _navigateToAbsencePage(DateTime date) async {
     final confirmed = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
-            TimeSelectionPage(selectedDate: date, childName: _selectedChild),
+            TimeSelectionPage(selectedDate: date, childName: widget.childName),
       ),
     );
 
     if (confirmed == true) {
-      setState(() {
-        _absentDays.add(DateTime(date.year, date.month, date.day));
-      });
+      final dateStr =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      await _firestore
+          .collection('enfants')
+          .doc(widget.childId)
+          .collection('events')
+          .doc(dateStr)
+          .set({
+        'isAbsent': true,
+        'date': dateStr,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
   }
 
-  // NOUVEAU : Fonction pour naviguer vers la page de ramassage
+  // Fonction pour naviguer vers la page de ramassage
   void _navigateToPickupPage(DateTime date) async {
     final TimeOfDay? pickedTime = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
-            PickupTimePage(selectedDate: date, childName: _selectedChild),
+            PickupTimePage(selectedDate: date, childName: widget.childName),
       ),
     );
 
     // Si l'utilisateur a choisi une heure, on la sauvegarde
     if (pickedTime != null) {
-      setState(() {
-        // On normalise la date (sans les heures/minutes) pour la clé
-        DateTime normalizedDate = DateTime(date.year, date.month, date.day);
-        _pickupTimes[normalizedDate] = pickedTime;
-
-        // Optionnel : Si l'enfant est absent ce jour-là, on le retire des absents
-        _absentDays.remove(normalizedDate);
-      });
+      final dateStr =
+          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      final timeStr =
+          "${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}";
+      await _firestore
+          .collection('enfants')
+          .doc(widget.childId)
+          .collection('events')
+          .doc(dateStr)
+          .set({
+        'pickupTime': timeStr,
+        'isAbsent': false, // Si ramassage, on enlève l'absence
+        'date': dateStr,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
   }
 
-  // NOUVEAU : Fonction pour récupérer l'heure de ramassage d'un jour précis
+  // Fonction pour récupérer l'heure de ramassage d'un jour précis
   TimeOfDay? _getPickupTimeForDay(DateTime day) {
     DateTime normalizedDate = DateTime(day.year, day.month, day.day);
     return _pickupTimes[normalizedDate];
@@ -99,13 +183,23 @@ class _CalendarPageState extends State<CalendarPage> {
               color: Color(0xFF0B511B),
               borderRadius: BorderRadius.only(bottomRight: Radius.circular(56)),
             ),
-            child: const Text(
-              "Smart Nursery",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Expanded(
+                  child: Text(
+                    "Smart Nursery",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -188,7 +282,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                 ),
                               );
                             },
-                            // NOUVEAU : Ajout d'un petit point si une heure de ramassage est prévue
+                            // Ajout d'un petit point si une heure de ramassage est prévue
                             markerBuilder: (context, day, events) {
                               if (_getPickupTimeForDay(day) != null) {
                                 return Positioned(
@@ -218,7 +312,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     ),
                   ),
 
-                  // NOUVEAU : Affichage de l'heure de ramassage pour le jour sélectionné
+                  // Affichage de l'heure de ramassage pour le jour sélectionné
                   if (_selectedDay != null &&
                       _getPickupTimeForDay(_selectedDay!) != null)
                     Padding(
@@ -257,7 +351,7 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
           ),
 
-          // NOUVEAU : Zone des boutons (Absence + Ramassage)
+          // Zone des boutons (Absence + Ramassage)
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -305,6 +399,12 @@ class _CalendarPageState extends State<CalendarPage> {
                   onPressed: () {
                     if (_selectedDay != null) {
                       _navigateToAbsencePage(_selectedDay!);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Veuillez sélectionner une date"),
+                        ),
+                      );
                     }
                   },
                   icon: const Icon(Icons.event_busy),

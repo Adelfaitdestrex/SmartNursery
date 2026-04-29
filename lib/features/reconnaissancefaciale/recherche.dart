@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'recherche_en_cours.dart';
 
 class RechercheFacePage extends StatelessWidget {
   const RechercheFacePage({super.key});
@@ -70,97 +71,94 @@ class RechercheFacePage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                          const Text(
-                            "Vérification d'identité",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: darkText,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                            const Text(
+                              "Vérification d'identité",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: darkText,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            "Placez votre visage dans le cadre pour\nsécuriser votre accès à la plateforme.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: mediumText,
-                              fontSize: 15,
+                            const SizedBox(height: 12),
+                            const Text(
+                              "Placez votre visage dans le cadre pour\nsécuriser votre accès à la plateforme.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: mediumText, fontSize: 15),
                             ),
-                          ),
-                          const SizedBox(height: 40),
+                            const SizedBox(height: 40),
 
-                          /// CADRE CAMERA
-                          Center(
-                            child: SizedBox(
-                              width: 260,
-                              height: 260,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  CustomPaint(
-                                    size: const Size(260, 260),
-                                    painter: DashedCirclePainter(
-                                      color: Color.fromRGBO(0, 111, 29, 0.2),
-                                      strokeWidth: 4,
-                                      dashWidth: 10,
-                                      dashSpace: 10,
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 236,
-                                    height: 236,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: greenAccent,
-                                        width: 4,
+                            /// CADRE CAMERA
+                            Center(
+                              child: SizedBox(
+                                width: 260,
+                                height: 260,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    CustomPaint(
+                                      size: const Size(260, 260),
+                                      painter: DashedCirclePainter(
+                                        color: Color.fromRGBO(0, 111, 29, 0.2),
+                                        strokeWidth: 4,
+                                        dashWidth: 10,
+                                        dashSpace: 10,
                                       ),
                                     ),
-                                    child: ClipOval(
-                                      child: Image.network(
-                                        'https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?auto=format&fit=crop&w=500&q=60',
-                                        fit: BoxFit.cover,
+                                    Container(
+                                      width: 236,
+                                      height: 236,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: greenAccent,
+                                          width: 4,
+                                        ),
+                                      ),
+                                      child: ClipOval(
+                                        child: Image.network(
+                                          'https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?auto=format&fit=crop&w=500&q=60',
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 45),
+                            const SizedBox(height: 45),
 
-                          /// INFO BOX
-                          Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 14,
-                              ),
-                              decoration: BoxDecoration(
-                                        color: infoBg,
-                                borderRadius: BorderRadius.circular(40),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(
-                                    Icons.wb_sunny_outlined,
-                                            color: mediumText,
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    "Assurez-vous d'être dans un\nendroit bien éclairé.",
-                                    style: TextStyle(
-                                              color: mediumText,
-                                      fontSize: 13,
+                            /// INFO BOX
+                            Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: infoBg,
+                                  borderRadius: BorderRadius.circular(40),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(
+                                      Icons.wb_sunny_outlined,
+                                      color: mediumText,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 12),
+                                    Text(
+                                      "Assurez-vous d'être dans un\nendroit bien éclairé.",
+                                      style: TextStyle(
+                                        color: mediumText,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
                           ],
                         ),
                       ),
@@ -201,7 +199,13 @@ class RechercheFacePage extends StatelessWidget {
                     ),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const IdentificationScreen(),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: buttonColor,
                           shape: RoundedRectangleBorder(

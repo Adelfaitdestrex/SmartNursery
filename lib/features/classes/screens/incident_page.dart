@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smartnursery/design_system/design_tokens.dart';
 import 'package:smartnursery/features/news-feed/screen/feed_page.dart';
 import 'package:smartnursery/shared/widgets/shared_bottom_navbar.dart';
 import 'package:smartnursery/shared/widgets/shared_header.dart';
 
 class IncidentReportPage extends StatefulWidget {
-  const IncidentReportPage({super.key});
+  final String classId;
+  final String? initialChildId;
+
+  const IncidentReportPage({super.key, required this.classId, this.initialChildId});
 
   @override
   State<IncidentReportPage> createState() => _IncidentReportPageState();
@@ -13,6 +17,56 @@ class IncidentReportPage extends StatefulWidget {
 
 class _IncidentReportPageState extends State<IncidentReportPage> {
   String selectedPriority = 'Faible';
+  String? _selectedChildId;
+  List<Map<String, dynamic>> _children = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedChildId = widget.initialChildId;
+    _fetchChildren();
+  }
+
+  Future<void> _fetchChildren() async {
+    try {
+      final classDoc = await FirebaseFirestore.instance.collection('classes').doc(widget.classId).get();
+      final childrenIds = List<String>.from(classDoc.data()?['childrenIds'] ?? []);
+      
+      List<Map<String, dynamic>> loadedChildren = [];
+      if (childrenIds.isNotEmpty) {
+        for (var i = 0; i < childrenIds.length; i += 30) {
+          final batch = childrenIds.sublist(i, (i + 30) > childrenIds.length ? childrenIds.length : (i + 30));
+          final snap = await FirebaseFirestore.instance.collection('enfants').where(FieldPath.documentId, whereIn: batch).get();
+          for (var doc in snap.docs) {
+            loadedChildren.add({...doc.data(), 'id': doc.id});
+          }
+        }
+      }
+      
+      if (loadedChildren.isEmpty) {
+         final snap2 = await FirebaseFirestore.instance.collection('enfants').where('classId', isEqualTo: widget.classId).get();
+         for (var doc in snap2.docs) {
+           if (!loadedChildren.any((c) => c['id'] == doc.id)) {
+             loadedChildren.add({...doc.data(), 'id': doc.id});
+           }
+         }
+      }
+
+      setState(() {
+        _children = loadedChildren;
+        _isLoading = false;
+        if (_selectedChildId == null && _children.isNotEmpty) {
+          _selectedChildId = _children.first['id'];
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      debugPrint("Error fetching children: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +92,7 @@ class _IncidentReportPageState extends State<IncidentReportPage> {
               ),
               leftLabel: null,
               onLeftTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FeedPage()),
-                );
+                Navigator.pop(context);
               },
             ),
 
@@ -62,15 +113,29 @@ class _IncidentReportPageState extends State<IncidentReportPage> {
                     const SizedBox(height: 15),
 
                     // قائمة الأطفال
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _childAvatar("Léo", true),
-                        _childAvatar("Chloé", false),
-                        _childAvatar("Gabriel", false),
-                        _childAvatar("Inès", false),
-                      ],
-                    ),
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: _children.map((child) {
+                                final name = child['firstName'] ?? '';
+                                final avatarUrl = child['avatarImageUrl'] as String?;
+                                final isSelected = _selectedChildId == child['id'];
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 15),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedChildId = child['id'];
+                                      });
+                                    },
+                                    child: _childAvatar(name, isSelected, avatarUrl),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
 
                     const SizedBox(height: 25),
 
@@ -245,7 +310,7 @@ class _IncidentReportPageState extends State<IncidentReportPage> {
   }
 
   // مكوّن صور الأطفال
-  Widget _childAvatar(String name, bool isSelected) {
+  Widget _childAvatar(String name, bool isSelected, String? avatarUrl) {
     return Column(
       children: [
         Container(
@@ -257,9 +322,11 @@ class _IncidentReportPageState extends State<IncidentReportPage> {
               width: 3,
             ),
           ),
-          child: const CircleAvatar(
+          child: CircleAvatar(
             radius: 30,
-            backgroundImage: NetworkImage('https://via.placeholder.com/100'),
+            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                ? NetworkImage(avatarUrl)
+                : const NetworkImage('https://via.placeholder.com/100'),
           ),
         ),
         const SizedBox(height: 5),

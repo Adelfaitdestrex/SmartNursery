@@ -16,9 +16,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final List<String> _tabs = ['Tout', 'Message', 'Activité', 'post'];
   final NotificationService _notificationService = NotificationService();
 
+  late Stream<List<NotificationModel>> _notificationsStream;
+  late Stream<int> _unreadCountStream;
+
   @override
   void initState() {
     super.initState();
+    
+    // Initialize streams ONCE to avoid recreating them on every build
+    _notificationsStream = _notificationService.getNotificationsStream();
+    _unreadCountStream = _notificationService.getUnreadCountStream();
+
     // Mark all as read when opening the notification screen
     _notificationService.markAllAsRead();
 
@@ -79,7 +87,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
           // Unread badge notification
           StreamBuilder<int>(
-            stream: _notificationService.getUnreadCountStream(),
+            stream: _unreadCountStream,
             builder: (context, snapshot) {
               final unreadCount = snapshot.data ?? 0;
               return Stack(
@@ -166,7 +174,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Widget _buildNotificationList() {
     return StreamBuilder<List<NotificationModel>>(
-      stream: _notificationService.getNotificationsStream(),
+      stream: _notificationsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

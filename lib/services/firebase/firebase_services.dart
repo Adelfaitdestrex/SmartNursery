@@ -2,9 +2,30 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:smartnursery/services/firebase/firebase_options.dart';
+import 'package:smartnursery/features/notifiacation/services/push_notification_service.dart';
 
 class FirebaseServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// Sauvegarder le token FCM pour l'utilisateur connecté
+  Future<void> _saveFCMToken() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final token = await PushNotificationService.getToken();
+      if (token != null) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'fcmToken': token,
+          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      // Ne pas bloquer la connexion si le token FCM échoue
+      print('⚠️ Erreur sauvegarde FCM token: $e');
+    }
+  }
 
   // Retourne null si succès, sinon le message d'erreur
   Future<String?> signInWithEmailAndPassword(
@@ -13,6 +34,8 @@ class FirebaseServices {
   ) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
+      // Sauvegarder le token FCM après connexion réussie
+      await _saveFCMToken();
       return null;
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
@@ -38,6 +61,8 @@ class FirebaseServices {
         email: email,
         password: password,
       );
+      // Sauvegarder le token FCM après création de compte réussie
+      await _saveFCMToken();
       return null;
     } on FirebaseAuthException catch (e) {
       switch (e.code) {

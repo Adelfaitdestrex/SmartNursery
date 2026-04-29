@@ -17,6 +17,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
 const cors = require("cors")({ origin: true });
+const axios = require("axios");
 
 // Initialiser Firebase Admin
 if (!admin.apps.length) {
@@ -321,6 +322,62 @@ exports.requestPasswordResetCode = functions.https.onRequest((req, res) => {
 });
 
 // ============================================================================
+// CLOUD FUNCTION: recognizeFace (proxy vers service de reconnaissance)
+// ============================================================================
+
+/**
+ * Proxy de reconnaissance faciale
+ *
+ * Configurez l'URL du service externe:
+ * firebase functions:config:set facerec.url="https://votre-serveur/recognize"
+ */
+exports.recognizeFace = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== "POST") {
+      return res
+        .status(405)
+        .json({ recognized: false, message: "Method not allowed. Use POST." });
+    }
+
+    const config = functions.config();
+    const proxyUrl = config.facerec?.url || process.env.FACE_RECO_URL;
+
+    if (!proxyUrl) {
+      return res.status(500).json({
+        recognized: false,
+        message:
+          "facerec.url manquant. Configurez: firebase functions:config:set facerec.url=...",
+      });
+    }
+
+    const imageUrl = req.body?.imageUrl || req.body?.image_url;
+    if (!imageUrl) {
+      return res
+        .status(400)
+        .json({ recognized: false, message: "imageUrl manquante" });
+    }
+
+    try {
+      const response = await axios.post(
+        proxyUrl,
+        { imageUrl: imageUrl, image_url: imageUrl },
+        { headers: { "Content-Type": "application/json" }, timeout: 30000 },
+      );
+
+      return res.status(200).json(response.data);
+    } catch (error) {
+      const status = error.response?.status || 500;
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Erreur lors de la reconnaissance";
+
+      return res.status(status).json({ recognized: false, message: message });
+    }
+  });
+});
+
+// ============================================================================
 // CLOUD FUNCTION: resetPasswordWithCode
 // ============================================================================
 exports.resetPasswordWithCode = functions.https.onRequest((req, res) => {
@@ -413,7 +470,11 @@ exports.createUser = functions.https.onCall(async (data, context) => {
   const callerUid = context.auth.uid;
   let callerDoc;
   try {
-    callerDoc = await admin.firestore().collection("users").doc(callerUid).get();
+    callerDoc = await admin
+      .firestore()
+      .collection("users")
+      .doc(callerUid)
+      .get();
   } catch (e) {
     throw new functions.https.HttpsError(
       "internal",
@@ -437,20 +498,41 @@ exports.createUser = functions.https.onCall(async (data, context) => {
   }
 
   // ── 3. Validation des données entrantes ────────────────────────────────────
-  const { email, password, name, phone, role, isActive, profileImageUrl, nurseryId } = data;
+  const {
+    email,
+    password,
+    name,
+    phone,
+    role,
+    isActive,
+    profileImageUrl,
+    nurseryId,
+  } = data;
 
   if (!email || !email.includes("@")) {
-    throw new functions.https.HttpsError("invalid-argument", "Adresse e-mail invalide.");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Adresse e-mail invalide.",
+    );
   }
   if (!password || password.length < 6) {
-    throw new functions.https.HttpsError("invalid-argument", "Le mot de passe doit contenir au moins 6 caractères.");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Le mot de passe doit contenir au moins 6 caractères.",
+    );
   }
   if (!name || name.trim().length === 0) {
-    throw new functions.https.HttpsError("invalid-argument", "Le nom est obligatoire.");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Le nom est obligatoire.",
+    );
   }
   const allowedRoles = ["parent", "educator", "admin", "director"];
   if (!role || !allowedRoles.includes(role)) {
-    throw new functions.https.HttpsError("invalid-argument", `Rôle invalide. Valeurs acceptées : ${allowedRoles.join(", ")}.`);
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      `Rôle invalide. Valeurs acceptées : ${allowedRoles.join(", ")}.`,
+    );
   }
 
   // ── 4. Création du compte Firebase Auth (Admin SDK = pas de basculement) ───
@@ -464,15 +546,27 @@ exports.createUser = functions.https.onCall(async (data, context) => {
   } catch (error) {
     console.error("❌ Error creating auth user:", error);
     if (error.code === "auth/email-already-exists") {
-      throw new functions.https.HttpsError("already-exists", "Cet email est déjà utilisé par un autre utilisateur.");
+      throw new functions.https.HttpsError(
+        "already-exists",
+        "Cet email est déjà utilisé par un autre utilisateur.",
+      );
     }
     if (error.code === "auth/invalid-email") {
-      throw new functions.https.HttpsError("invalid-argument", "L'adresse e-mail est invalide.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "L'adresse e-mail est invalide.",
+      );
     }
     if (error.code === "auth/weak-password") {
-      throw new functions.https.HttpsError("invalid-argument", "Le mot de passe est trop faible.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Le mot de passe est trop faible.",
+      );
     }
-    throw new functions.https.HttpsError("internal", error.message || "Erreur lors de la création du compte.");
+    throw new functions.https.HttpsError(
+      "internal",
+      error.message || "Erreur lors de la création du compte.",
+    );
   }
 
   const uid = userRecord.uid;
@@ -482,26 +576,37 @@ exports.createUser = functions.https.onCall(async (data, context) => {
 
   // ── 5. Écriture Firestore via Admin SDK (bypass des security rules) ─────────
   try {
-    await admin.firestore().collection("users").doc(uid).set({
-      uid: uid,
-      name: name.trim(),
-      firstName: firstName,
-      lastName: lastName,
-      email: email.trim(),
-      role: role,
-      phone: phone || null,
-      profileImageUrl: profileImageUrl || null,
-      isActive: isActive !== undefined ? isActive : true,
-      nurseryId: nurseryId || "1",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdBy: callerUid,
-    });
+    await admin
+      .firestore()
+      .collection("users")
+      .doc(uid)
+      .set({
+        uid: uid,
+        name: name.trim(),
+        firstName: firstName,
+        lastName: lastName,
+        email: email.trim(),
+        role: role,
+        phone: phone || null,
+        profileImageUrl: profileImageUrl || null,
+        isActive: isActive !== undefined ? isActive : true,
+        nurseryId: nurseryId || "1",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdBy: callerUid,
+      });
   } catch (error) {
     // Rollback : supprimer le compte Auth si Firestore échoue
     console.error("❌ Firestore write failed, rolling back auth:", error);
-    try { await admin.auth().deleteUser(uid); } catch (e) { console.error("❌ Rollback failed:", e); }
-    throw new functions.https.HttpsError("internal", "Erreur lors de la sauvegarde des données utilisateur.");
+    try {
+      await admin.auth().deleteUser(uid);
+    } catch (e) {
+      console.error("❌ Rollback failed:", e);
+    }
+    throw new functions.https.HttpsError(
+      "internal",
+      "Erreur lors de la sauvegarde des données utilisateur.",
+    );
   }
 
   console.log(`✅ User created: ${email} (${role}) by admin ${callerUid}`);

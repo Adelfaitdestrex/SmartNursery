@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:smartnursery/features/notifiacation/services/notification_service.dart';
 
 class MessageService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final NotificationService _notificationService = NotificationService();
 
   /// Obtenir ou créer une conversation entre 2 utilisateurs
   Future<String> getOrCreateConversation(String otherUserId) async {
@@ -52,6 +54,15 @@ class MessageService {
     if (currentUserId == null) throw Exception('Utilisateur non connecté');
 
     try {
+      // Récupérer les infos du sender et du recipient
+      final senderDoc = await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .get();
+      final senderName = senderDoc.data()?['displayName'] ?? 'Unknown';
+      final senderImage = senderDoc.data()?['profileImageUrl'];
+      final nurseryId = senderDoc.data()?['nurseryId'] ?? '';
+
       final chatRef = _firestore
           .collection('messages')
           .doc(conversationId)
@@ -87,6 +98,26 @@ class MessageService {
         'unreadCount.$currentUserId': 0,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // 4️⃣ Créer une notification pour le recipient
+      if (nurseryId.isNotEmpty) {
+        await _notificationService.createNotification(
+          nurseryId: nurseryId,
+          sourceUserId: currentUserId,
+          sourceUserName: senderName,
+          type: 'message',
+          title: 'Nouveau message de $senderName',
+          message: content.length > 50
+              ? content.substring(0, 50) + '...'
+              : content,
+          sourceUserProfileImage: senderImage,
+          relatedDocumentId: docRef.id,
+          additionalData: {
+            'conversationId': conversationId,
+            'recipientId': recipientId,
+          },
+        );
+      }
     } catch (e) {
       debugPrint('❌ Erreur envoi message: $e');
       rethrow;
@@ -172,6 +203,17 @@ class MessageService {
         .collection('messages')
         .where('participantIds', arrayContains: currentUserId)
         .orderBy('updatedAt', descending: true)
+        .snapshots();
+  }
+
+  /// Obtenir les conversations sans tri Firestore (fallback si index absent)
+  Stream<QuerySnapshot> getUserConversationsFallback() {
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId == null) return const Stream.empty();
+
+    return _firestore
+        .collection('messages')
+        .where('participantIds', arrayContains: currentUserId)
         .snapshots();
   }
 
