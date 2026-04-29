@@ -475,21 +475,7 @@ class _IdentifyUserByFaceButtonState extends State<_IdentifyUserByFaceButton> {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        _CustomButton(
-          text: _isIdentifying
-              ? 'Identification en cours...'
-              : 'Identifier un utilisateur',
-          backgroundColor: const Color(0xFF007AFF),
-          textColor: Colors.white,
-          borderColor: const Color(0xFF007AFF),
-          iconData: Icons.face_unlock_outlined,
-          onTap: _isIdentifying ? () {} : _identifyUser,
-        ),
-      ],
-    );
+    return Column();
   }
 
   Future<void> _identifyUser() async {
@@ -513,8 +499,8 @@ class _IdentifyUserByFaceButtonState extends State<_IdentifyUserByFaceButton> {
     });
 
     try {
-      // 🔍 Appeler le service d'identification
-      final result = await _faceService.identifyUserFromAllFaces(
+      // ✨ VERSION PRO: Identification ultra-rapide avec encodages
+      final result = await _faceService.recognizeProWithEncoding(
         File(image.path),
       );
 
@@ -686,7 +672,7 @@ class _AddFaceToFirebaseButtonState extends State<_AddFaceToFirebaseButton> {
       _isUploading = true;
     });
 
-    final success = await _faceService.registerFaceFromXFile(
+    final success = await _faceService.registerFaceProWithEncoding(
       userMatch.uid,
       image,
     );
@@ -750,7 +736,7 @@ class _AddFaceToFirebaseButtonState extends State<_AddFaceToFirebaseButton> {
       return null;
     }
 
-    final matches = await _faceService.findAuthorizedUsersByName(
+    final matches = await _faceService.findAuthorizedUsersByNameFlexible(
       firstName: firstNameController.text,
       lastName: lastNameController.text,
     );

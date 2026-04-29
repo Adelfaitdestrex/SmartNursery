@@ -74,12 +74,64 @@ class FaceRecognitionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  String _normalizeName(String value) {
+    const withDiacritics =
+        'ÀÁÂÃÄÅàáâãäåÒÓÔÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÿÑñ';
+    const withoutDiacritics =
+        'AAAAAAaaaaaaOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuyNn';
+
+    var normalized = value.trim().toLowerCase();
+    for (var i = 0; i < withDiacritics.length; i++) {
+      normalized = normalized.replaceAll(
+        withDiacritics[i].toLowerCase(),
+        withoutDiacritics[i].toLowerCase(),
+      );
+    }
+
+    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
+    normalized = normalized.replaceAll(RegExp(r'[^a-z0-9 ]'), '');
+    return normalized;
+  }
+
   bool _isAuthorizedRole(String role) {
     final normalized = role.toLowerCase();
     return normalized == 'parent' ||
         normalized == 'admin' ||
         normalized == 'educateur' ||
         normalized == 'educator';
+  }
+
+  // ============================================================================
+  // 🗜️ UTILITAIRE COMPRESSION (DRY)
+  // ============================================================================
+
+  /// Compresse une image pour réduire la bande passante et éviter OOM sur backend
+  /// Retourne le fichier compressé (ou l'original si compression échoue)
+  Future<File> _compressImageFile(File imageFile) async {
+    try {
+      final String targetPath = '${imageFile.absolute.path}_compressed.jpg';
+
+      final XFile? compressedXFile =
+          await FlutterImageCompress.compressAndGetFile(
+            imageFile.absolute.path,
+            targetPath,
+            quality: 70, // Qualité à 70% (réduit taille par 10)
+            minWidth: 800,
+            minHeight: 800,
+          );
+
+      if (compressedXFile != null) {
+        debugPrint('✅ Image compressée: $targetPath');
+        return File(compressedXFile.path);
+      }
+
+      // Fallback si compression échoue
+      debugPrint('⚠️ Compression échouée, utilisation de l\'original');
+      return imageFile;
+    } catch (e) {
+      debugPrint('⚠️ Erreur compression: $e, utilisation de l\'original');
+      return imageFile;
+    }
   }
 
   Future<List<FaceUserMatch>> findAuthorizedUsersByName({
@@ -226,6 +278,7 @@ class FaceRecognitionService {
           return FaceRecognitionResult(
             recognized: true,
             personId: personId,
+
             personName: personName,
             message:
                 data['message'] as String? ?? 'Visage reconnu avec succès ✅',
@@ -256,6 +309,67 @@ class FaceRecognitionService {
         personName: '',
         message: 'Erreur de parsing JSON: $e',
       );
+    }
+  }
+
+  Future<List<FaceUserMatch>> findAuthorizedUsersByNameFlexible({
+    required String firstName,
+    required String lastName,
+  }) async {
+    final normalizedFirst = firstName.trim();
+    final normalizedLast = lastName.trim();
+
+    if (normalizedFirst.isEmpty || normalizedLast.isEmpty) {
+      return [];
+    }
+
+    try {
+      final usersSnapshot = await _firestore.collection('users').get();
+      final wantedFullName = _normalizeName('$normalizedFirst $normalizedLast');
+
+      return usersSnapshot.docs
+          .where((doc) {
+            final data = doc.data();
+            final role = (data['role'] ?? '').toString();
+            if (!_isAuthorizedRole(role)) {
+              return false;
+            }
+
+            final firstNameValue = (data['firstName'] ?? '').toString();
+            final lastNameValue = (data['lastName'] ?? '').toString();
+            final nameValue = (data['name'] ?? '').toString();
+
+            final docFullName = _normalizeName(
+              [
+                firstNameValue,
+                lastNameValue,
+              ].where((part) => part.isNotEmpty).join(' '),
+            );
+            final docStoredName = _normalizeName(nameValue);
+
+            return docFullName == wantedFullName ||
+                docStoredName == wantedFullName ||
+                docStoredName.contains(wantedFullName) ||
+                wantedFullName.contains(docStoredName);
+          })
+          .map((doc) {
+            final data = doc.data();
+            final role = (data['role'] ?? '').toString();
+            final displayName =
+                (data['name'] ??
+                        '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}')
+                    .toString()
+                    .trim();
+            return FaceUserMatch(
+              uid: doc.id,
+              displayName: displayName.isEmpty ? doc.id : displayName,
+              role: role,
+            );
+          })
+          .toList();
+    } catch (e) {
+      debugPrint('Erreur recherche utilisateur autorisé: $e');
+      return [];
     }
   }
 
@@ -516,6 +630,219 @@ class FaceRecognitionService {
     } catch (e) {
       debugPrint('⚠️ Erreur lors de la comparaison: $e');
       return 0.0;
+    }
+  }
+
+  // ============================================================================
+  // ✨ VERSION PRO: ENREGISTREMENT AVEC ENCODAGE
+  // ============================================================================
+
+  Future<bool> registerFaceProWithEncoding(
+    String personId,
+    XFile imageFile,
+  ) async {
+    try {
+      debugPrint('🚀 [PRO] Enregistrement visage avec encodage pour $personId');
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'face_${timestamp}.jpg';
+
+      // 1️⃣ Compression de l'image avant upload
+      final imageFileObj = File(imageFile.path);
+      final compressedFile = await _compressImageFile(imageFileObj);
+
+      // 2️⃣ Upload temporaire pour calcul backend
+      final tempFilename = 'temp_faces/register_${timestamp}.jpg';
+      final tempRef = _storage.ref(tempFilename);
+      final permanentRef = _storage.ref('faces/parents/$personId/$fileName');
+
+      final Uint8List bytes = await compressedFile.readAsBytes();
+      await tempRef.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+      final imageUrl = await tempRef.getDownloadURL();
+
+      debugPrint('📤 Image uploadée: $imageUrl');
+
+      // 3️⃣ Appel backend PRO: calcul + sauvegarde encodage
+      final serverUrl = _useLocalServer
+          ? _localServerUrl.replaceAll('/recognize', '/register_parent_face')
+          : 'https://smartnursery-face-recognition-1023759846976.europe-west1.run.app/register_parent_face';
+
+      debugPrint('📤 Envoi au backend: $serverUrl');
+      debugPrint('📦 Body: imageUrl=$imageUrl, parentId=$personId');
+
+      final response = await http
+          .post(
+            Uri.parse(serverUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'imageUrl': imageUrl, 'parentId': personId}),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      debugPrint('📥 Réponse backend: statusCode=${response.statusCode}');
+      debugPrint('📥 Body: ${response.body}');
+
+      // Suppression du fichier temporaire
+      await tempRef.delete().catchError((_) => null);
+
+      if (response.statusCode == 200) {
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final success = (data['success'] as bool?) ?? false;
+          final message = (data['message'] as String?) ?? '';
+
+          debugPrint('✅ Backend response: success=$success, message=$message');
+
+          if (success) {
+            debugPrint('✅ Encodage calculé et sauvegardé dans Firestore');
+
+            // Sauvegarde permanente de l'image (compressée) pour l'affichage et la suppression
+            await permanentRef.putData(
+              bytes,
+              SettableMetadata(contentType: 'image/jpeg'),
+            );
+            debugPrint(
+              '✅ Photo sauvegardée dans Storage: faces/parents/$personId/$fileName',
+            );
+
+            // Note: Le backend a déjà sauvegardé l'encodage dans Firestore
+            // On met à jour juste les métadonnées locales
+            await _firestore.collection('users').doc(personId).set({
+              'hasFaceData': true,
+              'lastFaceRegisteredAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+
+            return true;
+          } else {
+            debugPrint('❌ Backend returned success=false: $message');
+            return false;
+          }
+        } catch (parseError) {
+          debugPrint('❌ Erreur parsing JSON: $parseError');
+          debugPrint('❌ Body reçu: ${response.body}');
+          return false;
+        }
+      } else {
+        debugPrint('❌ HTTP Error: ${response.statusCode}');
+        debugPrint('❌ Body: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur enregistrement PRO: $e');
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // ✨ VERSION PRO: RECONNAISSANCE ULTRA-RAPIDE (+ FALLBACK LENT)
+  // ============================================================================
+
+  Future<FaceIdentificationResult> recognizeProWithEncoding(
+    File imageFile,
+  ) async {
+    try {
+      debugPrint('🚀 [PRO] Reconnaissance ultra-rapide');
+
+      // 1️⃣ Compression de l'image avant upload
+      final compressedFile = await _compressImageFile(imageFile);
+
+      // 2️⃣ Upload temporaire
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final tempFilename = 'temp_faces/recognize_${timestamp}.jpg';
+      final tempRef = _storage.ref(tempFilename);
+
+      await tempRef.putFile(compressedFile);
+      final imageUrl = await tempRef.getDownloadURL();
+
+      // 3️⃣ Appel backend PRO: comparaison rapide avec encodages Firestore
+      final serverUrl = _useLocalServer
+          ? _localServerUrl.replaceAll('/recognize', '/recognize_pro')
+          : 'https://smartnursery-face-recognition-1023759846976.europe-west1.run.app/recognize_pro';
+
+      debugPrint('📤 Envoi reconnaissance PRO');
+
+      final response = await http
+          .post(
+            Uri.parse(serverUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'imageUrl': imageUrl}),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      // Suppression du fichier temporaire
+      await tempRef.delete().catchError((_) => null);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final recognized = (data['recognized'] as bool?) ?? false;
+        final personId = (data['personId'] as String?) ?? '';
+        final personName = (data['personName'] as String?) ?? 'Utilisateur';
+        final role = (data['role'] as String?) ?? '';
+        final confidence = (data['confidence'] as num?)?.toDouble() ?? 0.0;
+        final distance = (data['distance'] as num?)?.toDouble() ?? 0.0;
+        final message = (data['message'] as String?) ?? '';
+        final usersWithEncoding = (data['usersWithEncoding'] as int?) ?? 0;
+
+        debugPrint('📥 Réponse backend: $data');
+        debugPrint('👥 Utilisateurs avec encodage: $usersWithEncoding');
+        debugPrint('📏 Distance: $distance');
+
+        if (recognized && personId.isNotEmpty) {
+          debugPrint(
+            '✅ Visage reconnu (RAPIDE): $personName (${(confidence * 100).toStringAsFixed(1)}%)',
+          );
+          return FaceIdentificationResult(
+            identified: true,
+            userId: personId,
+            userDisplayName: personName,
+            userRole: role,
+            confidence: confidence,
+            message: message,
+          );
+        }
+
+        // ⚠️ RECONNAISSANCE RAPIDE A ÉCHOUÉ → FALLBACK À LA LENTE
+        debugPrint(
+          '⚠️ [PRO] Reconnaissance rapide échouée, tentative lente...',
+        );
+        final slowResult = await identifyUserFromAllFaces(imageFile).timeout(
+          const Duration(minutes: 1),
+          onTimeout: () => FaceIdentificationResult(
+            identified: false,
+            userId: '',
+            userDisplayName: '',
+            userRole: '',
+            confidence: 0.0,
+            message: 'Timeout reconnaissance lente (> 60s)',
+          ),
+        );
+
+        if (slowResult.identified) {
+          debugPrint(
+            '✅ Visage reconnu (LENT/FALLBACK): ${slowResult.userDisplayName}',
+          );
+          return slowResult;
+        }
+      }
+
+      debugPrint('❌ Visage non reconnu - Response: ${response.body}');
+      return FaceIdentificationResult(
+        identified: false,
+        userId: '',
+        userDisplayName: '',
+        userRole: '',
+        confidence: 0.0,
+        message: 'Visage non reconnu - Accès refusé',
+      );
+    } catch (e) {
+      debugPrint('❌ Erreur reconnaissance PRO: $e');
+      return FaceIdentificationResult(
+        identified: false,
+        userId: '',
+        userDisplayName: '',
+        userRole: '',
+        confidence: 0.0,
+        message: 'Erreur: $e',
+      );
     }
   }
 }

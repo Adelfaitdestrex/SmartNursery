@@ -21,13 +21,115 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   int _selectedTabIndex = 0;
+  String _searchQuery = '';
+  List<String> _tabs = ['Tous'];
+  int _usersCount = 0;
+  int _teachersCount = 0;
+  int _parentsCount = 0;
+  String _currentNurseryId = '';
 
-  final List<String> _tabs = [
-    'Tous',
-    'Parents',
-    'Enseignants',
-    'Administrateurs',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUserNurseryId();
+    _loadRolesFromFirebase();
+    _startStatisticsRefresh();
+  }
+
+  Future<void> _loadCurrentUserNurseryId() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+        if (userDoc.exists) {
+          final nurseryId = userDoc['nurseryId'] as String?;
+          if (mounted) {
+            setState(() {
+              _currentNurseryId = nurseryId ?? '';
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Erreur lors du chargement de nurseryId: $e');
+    }
+  }
+
+  void _startStatisticsRefresh() {
+    // Charger les statistiques immédiatement
+    _loadStatistics();
+    _loadRolesFromFirebase();
+    // Puis les actualiser toutes les 5 secondes
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 5));
+      if (mounted) {
+        await _loadStatistics();
+      }
+      return mounted;
+    });
+  }
+
+  Future<void> _loadRolesFromFirebase() async {
+    try {
+      if (_currentNurseryId.isEmpty) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nurseryId', isEqualTo: _currentNurseryId)
+          .get();
+      final roles = <String>{'Tous'};
+      for (var doc in snapshot.docs) {
+        final role = doc['role'] as String?;
+        if (role != null && role.isNotEmpty) {
+          roles.add(role);
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _tabs = roles.toList();
+        });
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des rôles: $e');
+    }
+  }
+
+  Future<void> _loadStatistics() async {
+    try {
+      if (_currentNurseryId.isEmpty) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nurseryId', isEqualTo: _currentNurseryId)
+          .get();
+      int users = snapshot.docs.length;
+      int teachers = snapshot.docs
+          .where(
+            (doc) => (doc['role'] == 'Enseignant' || doc['role'] == 'educator'),
+          )
+          .length;
+      int parents = snapshot.docs
+          .where(
+            (doc) =>
+                (doc['isActive'] == true &&
+                (doc['role'] == 'Parent' || doc['role'] == 'parent')),
+          )
+          .length;
+
+      if (mounted) {
+        setState(() {
+          _usersCount = users;
+          _teachersCount = teachers;
+          _parentsCount = parents;
+        });
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des statistiques: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -233,6 +335,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                            });
+                          },
                           decoration: const InputDecoration(
                             hintText: 'Rechercher un utilisateur...',
                             hintStyle: TextStyle(
@@ -340,19 +447,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: const [
+            children: [
               Text(
-                '24',
-                style: TextStyle(
+                '$_usersCount',
+                style: const TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xB3546259), // rgba(84,98,89,0.7)
+                  color: Color(0xB3546259),
                   letterSpacing: 1.2,
                   height: 1.2,
                 ),
               ),
-              Text(
+              const Text(
                 'UTILISATEURS',
                 style: TextStyle(
                   fontFamily: 'Inter',
@@ -371,15 +478,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Widget _buildUsersList() {
-    Query query = FirebaseFirestore.instance.collection('users');
+    if (_currentNurseryId.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    Query query = FirebaseFirestore.instance
+        .collection('users')
+        .where('nurseryId', isEqualTo: _currentNurseryId);
     if (_selectedTabIndex != 0) {
-      query = query.where(
-        'role',
-        isEqualTo: _tabs[_selectedTabIndex].substring(
-          0,
-          _tabs[_selectedTabIndex].length - 1,
-        ),
-      );
+      query = query.where('role', isEqualTo: _tabs[_selectedTabIndex]);
     }
 
     return StreamBuilder<QuerySnapshot>(
@@ -397,12 +504,24 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           return const Center(child: Text("No users found"));
         }
 
+        // Filtrer les utilisateurs par nom de recherche
+        final filteredDocs = snapshot.data!.docs.where((doc) {
+          final userName = (doc['name'] as String? ?? '').toLowerCase();
+          return userName.contains(_searchQuery.toLowerCase());
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return Center(
+            child: Text("Aucun utilisateur trouvé pour '$_searchQuery'"),
+          );
+        }
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: ListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            children: snapshot.data!.docs.map((DocumentSnapshot document) {
+            children: filteredDocs.map((DocumentSnapshot document) {
               Map<String, dynamic> data =
                   document.data()! as Map<String, dynamic>;
               final userId = document.id;
@@ -441,7 +560,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     ),
                   );
                 },
-                onAddChild: userRole == 'parent'
+                onAddChild: userRole == 'Parent'
                     ? () {
                         Navigator.push(
                           context,
@@ -473,7 +592,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               height: 163,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0x4DA3F69C), // rgba(163,246,156,0.3)
+                color: const Color(0x4DA3F69C),
                 borderRadius: BorderRadius.circular(32),
               ),
               child: Column(
@@ -487,10 +606,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        '15',
-                        style: TextStyle(
+                        '$_parentsCount',
+                        style: const TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 30,
                           fontWeight: FontWeight.w600,
@@ -498,7 +617,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           height: 1.2,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Parents connectés',
                         style: TextStyle(
                           fontFamily: 'Inter',
@@ -520,7 +639,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               height: 163,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0x4DB4FDB4), // rgba(180,253,180,0.3)
+                color: const Color(0x4DB4FDB4),
                 borderRadius: BorderRadius.circular(32),
               ),
               child: Column(
@@ -534,10 +653,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        '9',
-                        style: TextStyle(
+                        '$_teachersCount',
+                        style: const TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 30,
                           fontWeight: FontWeight.w600,
@@ -545,7 +664,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           height: 1.2,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Enseignants',
                         style: TextStyle(
                           fontFamily: 'Inter',
@@ -703,9 +822,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     if (document.id == currentUid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Vous ne pouvez pas supprimer votre propre compte.',
-          ),
+          content: Text('Vous ne pouvez pas supprimer votre propre compte.'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
         ),

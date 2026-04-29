@@ -5,8 +5,10 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:smartnursery/features/admin/screens/add_children_flow_page.dart';
+import 'package:smartnursery/services/face_recognition_service.dart';
 
 class AdminAddUserScreen extends StatefulWidget {
   const AdminAddUserScreen({super.key});
@@ -16,18 +18,21 @@ class AdminAddUserScreen extends StatefulWidget {
 }
 
 class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
-  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   String? _profileImageUrl;
   File? _image;
-  File? _faceImage;
+  XFile? _faceImage;
   bool _hasFaceData = false;
   final ImagePicker _picker = ImagePicker();
   bool _isActive = true;
   bool _isLoading = false;
   bool _emailManuallyEdited = false;
+  final FaceRecognitionService _faceService = FaceRecognitionService();
+  String _adminNurseryId = '1'; // Par défaut
 
   final TextEditingController _enfantController = TextEditingController();
   final TextEditingController _classeController = TextEditingController();
@@ -46,8 +51,10 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
   @override
   void initState() {
     super.initState();
+    _loadAdminNurseryId();
     _generatePassword();
-    _nameController.addListener(_onNameChanged);
+    _firstNameController.addListener(_onNameChanged);
+    _lastNameController.addListener(_onNameChanged);
     _emailController.addListener(() {
       // Detect if user manually typed in the email field
       final autoEmail = _buildAutoEmail();
@@ -55,6 +62,25 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
         _emailManuallyEdited = true;
       }
     });
+  }
+
+  Future<void> _loadAdminNurseryId() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+        if (userDoc.exists && mounted) {
+          setState(() {
+            _adminNurseryId = userDoc['nurseryId'] as String? ?? '1';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Erreur lors du chargement du nurseryId de l\'admin: $e');
+    }
   }
 
   void _onNameChanged() {
@@ -70,7 +96,8 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -114,9 +141,10 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
   }
 
   String _buildAutoEmail() {
-    final name = _cleanString(_nameController.text);
-    if (name.isEmpty) return '';
-    return '$name@ecole-everbloom.fr';
+    final firstName = _cleanString(_firstNameController.text);
+    final lastName = _cleanString(_lastNameController.text);
+    if (firstName.isEmpty || lastName.isEmpty) return '';
+    return '$firstName.$lastName@ecole-everbloom.fr';
   }
 
   @override
@@ -237,12 +265,18 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
             ),
             const SizedBox(height: 24),
             _buildTextField(
-              label: 'Nom complet',
-              controller: _nameController,
-              hint: 'Ex: Marie Lefebvre',
+              label: 'Prénom',
+              controller: _firstNameController,
+              hint: 'Ex: Marie',
               icon: Icons.person_outline,
             ),
             const SizedBox(height: 16),
+            _buildTextField(
+              label: 'Nom de famille',
+              controller: _lastNameController,
+              hint: 'Ex: Lefebvre',
+              icon: Icons.person_outline,
+            ),
             const SizedBox(height: 16),
             _buildImagePicker(),
             const SizedBox(height: 16),
@@ -624,23 +658,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
     }
   }
 
-  Future<String?> _uploadFaceImage(File image, String userId) async {
-    try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('faces')
-          .child('parents')
-          .child(userId)
-          .child('$timestamp.jpg');
-      await storageRef.putFile(image);
-      final downloadUrl = await storageRef.getDownloadURL();
-      return downloadUrl;
-    } catch (e) {
-      debugPrint('Error uploading face image: $e');
-      return null;
-    }
-  }
+  // Méthode supprimée - La version PRO gère tout côté backend!
 
   String _generateDefaultAvatarUrl(String name, String email) {
     // Utilise ui-avatars.com pour générer un avatar déterministe à partir du nom
@@ -650,16 +668,28 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
   }
 
   Future<void> _handleCreateUser() async {
-    final name = _nameController.text.trim();
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final name = '$firstName $lastName';
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final phone = _phoneController.text.trim();
     final role = _roleValues[_selectedRoleIndex];
 
-    if (name.isEmpty) {
+    if (firstName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Le nom est obligatoire.'),
+          content: Text('Le prénom est obligatoire.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (lastName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Le nom de famille est obligatoire.'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -715,7 +745,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
         'phone': phone.isNotEmpty ? phone : null,
         'role': role,
         'isActive': _isActive,
-        'nurseryId': '1',
+        'nurseryId': _adminNurseryId,
       });
 
       final newUid = result.data['uid'] as String;
@@ -741,11 +771,19 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
         updateData['profileImageUrl'] = _profileImageUrl;
       }
 
-      // Upload visage si disponible
+      // Version PRO: Upload visage avec enregistrement encodage
       if (_faceImage != null) {
-        await _uploadFaceImage(_faceImage!, newUid);
-        updateData['hasFaceData'] = true;
-        updateData['lastFaceRegisteredAt'] = FieldValue.serverTimestamp();
+        final success = await _faceService.registerFaceProWithEncoding(
+          newUid,
+          _faceImage!,
+        );
+        if (success) {
+          updateData['hasFaceData'] = true;
+          updateData['lastFaceRegisteredAt'] = FieldValue.serverTimestamp();
+          debugPrint('✅ Encodage facial sauvegardé pour $newUid');
+        } else {
+          debugPrint('⚠️ Erreur lors de l\'enregistrement du visage');
+        }
       }
 
       await FirebaseFirestore.instance
@@ -770,7 +808,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
             builder: (context) => AddChildrenFlowPage(
               parentId: newUid,
               numberOfChildren: numberOfChildren!,
-              nurseryId: '1',
+              nurseryId: _adminNurseryId,
             ),
           ),
         );
@@ -956,7 +994,7 @@ class _AdminAddUserScreenState extends State<AdminAddUserScreen> {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _faceImage = File(pickedFile.path);
+        _faceImage = pickedFile;
         _hasFaceData = true;
       });
     }

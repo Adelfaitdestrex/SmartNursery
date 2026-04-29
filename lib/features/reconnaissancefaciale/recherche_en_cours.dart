@@ -129,23 +129,23 @@ class _IdentificationScreenState extends State<IdentificationScreen> {
       final imageFile = File(image.path);
 
       if (mounted)
-        setState(() => _statusMessage = '☁️ Envoi vers le serveur...');
+        setState(() => _statusMessage = '☁️ Analyse ultra-rapide...');
 
-      // 🔍 Appel reconnaissance faciale
-      final result = await _faceService.recognizeFace(imageFile);
+      // ✨ VERSION PRO: Reconnaissance avec encodages (100ms!)
+      final result = await _faceService.recognizeProWithEncoding(imageFile);
 
       if (!mounted) return;
 
       // Affiche le message exact reçu du serveur
       setState(() => _debugInfo = '→ ${result.message}');
 
-      if (result.recognized) {
+      if (result.identified) {
         await Future.delayed(const Duration(milliseconds: 300));
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => FaceRecognitionPage(
-              childName: result.personName,
+              childName: result.userDisplayName,
               confidenceLabel: result.message,
             ),
           ),

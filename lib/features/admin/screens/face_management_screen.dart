@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:smartnursery/services/face_recognition_service.dart';
 
 /// Écran de gestion des visages pour la reconnaissance faciale.
 /// Accessible depuis l'admin → liste des utilisateurs.
@@ -25,6 +26,7 @@ class FaceManagementScreen extends StatefulWidget {
 
 class _FaceManagementScreenState extends State<FaceManagementScreen> {
   final ImagePicker _picker = ImagePicker();
+  final FaceRecognitionService _faceService = FaceRecognitionService();
   bool _isUploading = false;
   List<Map<String, String>> _facePhotos = []; // {name, url}
   bool _loadingPhotos = true;
@@ -75,7 +77,7 @@ class _FaceManagementScreenState extends State<FaceManagementScreen> {
     }
   }
 
-  // ── Upload une nouvelle photo ─────────────────────────────────────────────
+  // ── Upload une nouvelle photo avec encodage PRO ─────────────────────────
   Future<void> _addPhoto(ImageSource source) async {
     final XFile? picked = await _picker.pickImage(
       source: source,
@@ -87,25 +89,27 @@ class _FaceManagementScreenState extends State<FaceManagementScreen> {
     setState(() => _isUploading = true);
 
     try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final path = 'faces/parents/${widget.userId}/$timestamp.jpg';
-      final ref = FirebaseStorage.instance.ref(path);
-      await ref.putFile(File(picked.path));
+      debugPrint('🎥 Ajout de visage: ${widget.userId}');
 
-      // Marquer hasFaceData = true dans Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .set({
-            'hasFaceData': true,
-            'lastFaceRegisteredAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+      // VERSION PRO: Calcule l'encodage et sauvegarde dans Firestore
+      final success = await _faceService.registerFaceProWithEncoding(
+        widget.userId,
+        picked,
+      );
 
       if (!mounted) return;
-      _showSnack('✅ Visage ajouté avec succès !', success: true);
-      await _loadFaceData();
+
+      if (success) {
+        debugPrint('✅ Encodage sauvegarde avec succes');
+        _showSnack('✅ Visage ajoute et encode avec succes !', success: true);
+        await _loadFaceData();
+      } else {
+        debugPrint('❌ Erreur lors de l\'encodage');
+        _showSnack('❌ Erreur lors de l\'encodage du visage', success: false);
+      }
     } catch (e) {
       if (!mounted) return;
+      debugPrint('❌ Erreur: $e');
       _showSnack('❌ Erreur : $e', success: false);
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -288,7 +292,10 @@ class _FaceManagementScreenState extends State<FaceManagementScreen> {
               icon: const Icon(Icons.add_a_photo, color: Colors.white),
               label: const Text(
                 'Ajouter un visage',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
     );
@@ -419,7 +426,11 @@ class _FaceManagementScreenState extends State<FaceManagementScreen> {
               ],
             ),
           ),
-          const Icon(Icons.face_retouching_natural, color: _greenAccent, size: 28),
+          const Icon(
+            Icons.face_retouching_natural,
+            color: _greenAccent,
+            size: 28,
+          ),
         ],
       ),
     );
@@ -430,9 +441,7 @@ class _FaceManagementScreenState extends State<FaceManagementScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: hasData
-            ? const Color(0xFFECF6ED)
-            : const Color(0xFFFFF3E0),
+        color: hasData ? const Color(0xFFECF6ED) : const Color(0xFFFFF3E0),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: hasData ? _greenAccent : Colors.orange,
@@ -498,10 +507,7 @@ class _FaceManagementScreenState extends State<FaceManagementScreen> {
             if (_facePhotos.isNotEmpty)
               Text(
                 '${_facePhotos.length}/5 max recommandé',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF546259),
-                ),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF546259)),
               ),
           ],
         ),

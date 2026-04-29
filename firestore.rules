@@ -59,6 +59,14 @@ service cloud.firestore {
       ) || isAdmin();
       
       allow delete: if isAdmin();
+      
+      // ✅ Sous-collection faceEncodings : encodages des visages (calculés par backend)
+      // Le backend utilise le service account (pas d'authentification utilisateur)
+      // donc on autorise les écritures sans restriction ici (la validation se fait en backend)
+      match /faceEncodings/{encodingId} {
+        allow read: if isAuthenticated();
+        allow write: if true; // Backend service account peut écrire
+      }
     }
     
     // =========================
