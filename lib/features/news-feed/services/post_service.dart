@@ -88,6 +88,11 @@ class PostService {
     if (user == null) throw Exception('Vous devez être connecté pour publier.');
 
     final userData = await getCurrentUserData();
+    final role = (userData?['role'] ?? 'parent').toString();
+
+    if (role == 'parent') {
+      throw Exception('Les parents ne peuvent pas publier.');
+    }
 
     // Récupérer le nom avec fallback
     String firstName = userData?['firstName'] ?? '';
@@ -99,7 +104,6 @@ class PostService {
       lastName = nameParts.length > 1 ? nameParts[1] : '';
     }
 
-    final role = userData?['role'] ?? 'parent';
     final nurseryId = userData?['nurseryId'] ?? '';
 
     final postRef = _firestore.collection('posts').doc();
@@ -121,6 +125,7 @@ class PostService {
       musicUrl: musicUrl,
       musicTitle: musicTitle,
       musicArtist: musicArtist,
+      nurseryId: nurseryId,
     );
 
     await postRef.set(post.toMap());
@@ -193,37 +198,78 @@ class PostService {
     }
   }
 
-  /// Récupère tous les posts triés par date décroissante (les plus récents d'abord)
+  /// Récupère tous les posts triés par date décroissante (les plus récents d'abord), filtrés par nurseryId
   Future<List<Post>> getPosts() async {
+    final user = _auth.currentUser;
+    if (user == null) return [];
+
     try {
+      final userData = await getCurrentUserData();
+      final nurseryId = userData?['nurseryId'] as String? ?? '';
+
+      if (nurseryId.isEmpty) {
+        debugPrint('⚠️ Impossible de récupérer les posts - nurseryId vide');
+        return [];
+      }
+
+      // Requête compatible règles Firestore (filtre nurseryId côté serveur),
+      // puis tri local pour éviter l'index composite where + orderBy.
       final snapshot = await _firestore
           .collection('posts')
-          .orderBy('createdAt', descending: true)
+          .where('nurseryId', isEqualTo: nurseryId)
+          .limit(100)
           .get();
 
-      return snapshot.docs
+      final posts = snapshot.docs
           .map((doc) => Post.fromMap(doc.data(), doc.id))
           .toList();
+
+      posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return posts;
     } catch (e) {
-      print('Error fetching posts: $e');
+      debugPrint('❌ Error fetching posts: $e');
       return [];
     }
   }
 
-  /// Récupère un stream en temps réel de tous les posts
+  /// Récupère un stream en temps réel de tous les posts de la nursery de l'utilisateur
   Stream<List<Post>> getPostsStream() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.empty();
+
     return _firestore
-        .collection('posts')
-        .orderBy('createdAt', descending: true)
+        .collection('users')
+        .doc(user.uid)
         .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => Post.fromMap(doc.data(), doc.id))
-              .toList();
+        .asyncExpand((userDoc) {
+          if (!userDoc.exists) {
+            debugPrint('⚠️ Document utilisateur introuvable: ${user.uid}');
+            return Stream.value(<Post>[]);
+          }
+
+          final data = userDoc.data();
+          final nurseryId = data?['nurseryId'] as String? ?? '';
+          if (nurseryId.isEmpty) {
+            debugPrint('⚠️ nurseryId vide pour cet utilisateur');
+            return Stream.value(<Post>[]);
+          }
+
+          return _firestore
+              .collection('posts')
+              .where('nurseryId', isEqualTo: nurseryId)
+              .limit(50)
+              .snapshots()
+              .map((snapshot) {
+                final posts = snapshot.docs
+                    .map((doc) => Post.fromMap(doc.data(), doc.id))
+                    .toList();
+                posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                return posts;
+              });
         })
         .handleError((error) {
-          print('Error in posts stream: $error');
-          return [];
+          debugPrint('❌ Error in posts stream: $error');
+          return <Post>[];
         });
   }
 

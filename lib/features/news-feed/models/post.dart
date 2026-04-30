@@ -21,6 +21,7 @@ class Post {
   final String? musicUrl;
   final String? musicTitle;
   final String? musicArtist;
+  final String nurseryId;
 
   Post({
     required this.postId,
@@ -43,6 +44,7 @@ class Post {
     this.musicUrl,
     this.musicTitle,
     this.musicArtist,
+    required this.nurseryId,
   });
 
   Map<String, dynamic> toMap() {
@@ -67,6 +69,7 @@ class Post {
       if (musicUrl != null) 'musicUrl': musicUrl,
       if (musicTitle != null) 'musicTitle': musicTitle,
       if (musicArtist != null) 'musicArtist': musicArtist,
+      'nurseryId': nurseryId,
     };
   }
 
@@ -94,6 +97,7 @@ class Post {
       musicUrl: map['musicUrl'],
       musicTitle: map['musicTitle'],
       musicArtist: map['musicArtist'],
+      nurseryId: map['nurseryId'] ?? '',
     );
   }
 }

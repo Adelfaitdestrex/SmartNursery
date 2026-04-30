@@ -133,29 +133,35 @@ service cloud.firestore {
     // =========================
     
     match /posts/{postId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      // ✅ Lecture : uniquement les posts de la même nursery
+      allow read: if isAuthenticated() && belongsToNursery(resource.data.nurseryId);
       
-      allow update: if resource.data.authorId == request.auth.uid;
+      // ✅ Création : l'utilisateur doit envoyer son nurseryId et il doit correspondre à son nurseryId réel
+      allow create: if isAuthenticated() && request.resource.data.nurseryId == getNurseryId();
       
-      allow delete: if isAdmin() || resource.data.authorId == request.auth.uid;
+      // ✅ Mise à jour : auteur du post ET même nurseryId
+      allow update: if isAuthenticated() && 
+        resource.data.authorId == request.auth.uid && 
+        resource.data.nurseryId == getNurseryId();
+      
+      // ✅ Suppression : admin/directeur OU auteur du post
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.authorId == request.auth.uid && resource.data.nurseryId == getNurseryId());
       
       // Comments
       match /comments/{commentId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
+        allow read: if isAuthenticated() && belongsToNursery(get(/databases/$(database)/documents/posts/$(postId)).data.nurseryId);
+        allow create: if isAuthenticated() && belongsToNursery(get(/databases/$(database)/documents/posts/$(postId)).data.nurseryId);
         
-        allow update: if resource.data.authorId == request.auth.uid;
+        allow update: if isAuthenticated() && resource.data.authorId == request.auth.uid;
         
-        allow delete: if isAdmin() ||
-          resource.data.authorId == request.auth.uid;
+        allow delete: if isAdmin() || (isAuthenticated() && resource.data.authorId == request.auth.uid);
       }
       
       // Likes
       match /likes/{userId} {
-        allow read: if isAuthenticated();
-        allow create: if request.auth.uid == userId;
-        allow delete: if request.auth.uid == userId;
+        allow read: if isAuthenticated() && belongsToNursery(get(/databases/$(database)/documents/posts/$(postId)).data.nurseryId);
+        allow create: if isAuthenticated() && request.auth.uid == userId && belongsToNursery(get(/databases/$(database)/documents/posts/$(postId)).data.nurseryId);
+        allow delete: if isAuthenticated() && request.auth.uid == userId;
       }
     }
     

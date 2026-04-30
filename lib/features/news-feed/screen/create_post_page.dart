@@ -23,6 +23,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   File? _selectedImage;
   String _authorName = 'Chargement...';
   String _profileImageUrl = '';
+  String _userRole = 'parent';
   List<String> _selectedUserIds = [];
   List<String> _selectedUserNames = [];
   List<Map<String, dynamic>> _availableUsers = [];
@@ -48,6 +49,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       if (mounted) {
         setState(() {
           if (data != null) {
+            _userRole = (data['role'] ?? 'parent').toString();
             final firstName = (data['firstName'] ?? '').toString().trim();
             final lastName = (data['lastName'] ?? '').toString().trim();
             _authorName = '$firstName $lastName'.trim();
@@ -176,6 +178,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Future<void> _publishPost() async {
+    if (_userRole == 'parent') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Les parents ne peuvent pas publier.')),
+      );
+      return;
+    }
+
     final content = _contentController.text.trim();
     if (content.isEmpty && _selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -303,11 +312,13 @@ class _CreatePostPageState extends State<CreatePostPage> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           GestureDetector(
-            onTap: _isLoading ? null : _publishPost,
+            onTap: (_isLoading || _userRole == 'parent') ? null : _publishPost,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: _isLoading ? Colors.grey : AppColors.primaryButton,
+                color: (_isLoading || _userRole == 'parent')
+                    ? Colors.grey
+                    : AppColors.primaryButton,
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: const [
                   BoxShadow(
