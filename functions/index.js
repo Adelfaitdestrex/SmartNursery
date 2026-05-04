@@ -612,3 +612,80 @@ exports.createUser = functions.https.onCall(async (data, context) => {
   console.log(`✅ User created: ${email} (${role}) by admin ${callerUid}`);
   return { success: true, message: "Utilisateur créé avec succès.", uid: uid };
 });
+
+// ============================================================================
+// CLOUD FUNCTION: updateUser (Callable — sécurisé, Admin SDK)
+// Met à jour un utilisateur dans Auth et Firestore.
+// ============================================================================
+exports.updateUser = functions.https.onCall(async (data, context) => {
+  // 1. Authentification
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "Vous devez être connecté.",
+    );
+  }
+
+  // 2. Permissions
+  const callerUid = context.auth.uid;
+  const callerDoc = await admin.firestore().collection("users").doc(callerUid).get();
+  const callerRole = callerDoc.data()?.role;
+
+  if (!["admin", "director"].includes(callerRole)) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "Seuls les administrateurs peuvent modifier les utilisateurs.",
+    );
+  }
+
+  const { uid, email, name, phone, profileImageUrl, isActive } = data;
+
+  if (!uid) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "L'identifiant utilisateur (uid) est requis.",
+    );
+  }
+
+  try {
+    // 3. Mise à jour Firebase Authentication
+    const authUpdate = {};
+    if (email) authUpdate.email = email.trim();
+    if (name) authUpdate.displayName = name.trim();
+
+    await admin.auth().updateUser(uid, authUpdate);
+
+    // 4. Mise à jour Firestore
+    const firestoreUpdate = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (name) {
+      firestoreUpdate.name = name.trim();
+      const nameParts = name.trim().split(" ");
+      firestoreUpdate.firstName = nameParts[0] || "";
+      firestoreUpdate.lastName = nameParts.slice(1).join(" ") || "";
+    }
+    if (email) firestoreUpdate.email = email.trim();
+    if (phone !== undefined) firestoreUpdate.phone = phone;
+    if (profileImageUrl !== undefined) firestoreUpdate.profileImageUrl = profileImageUrl;
+    if (isActive !== undefined) firestoreUpdate.isActive = isActive;
+
+    await admin.firestore().collection("users").doc(uid).update(firestoreUpdate);
+
+    console.log(`✅ User updated: ${uid} by admin ${callerUid}`);
+    return { success: true, message: "Utilisateur mis à jour avec succès." };
+  } catch (error) {
+    console.error("❌ Error updating user:", error);
+    if (error.code === "auth/email-already-exists") {
+      throw new functions.https.HttpsError(
+        "already-exists",
+        "Cet email est déjà utilisé par un autre compte.",
+      );
+    }
+    throw new functions.https.HttpsError(
+      "internal",
+      error.message || "Erreur lors de la mise à jour.",
+    );
+  }
+});
